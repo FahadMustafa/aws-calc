@@ -3,3 +3,8 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# Recon captures: large (HAR can be 100+ MB) and may contain session IDs / analytics tokens.
+# Keep them locally for re-running analysis; do not push.
+captures/
+__pycache__/

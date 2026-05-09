@@ -1,0 +1,365 @@
+{
+  "name": "My Estimate",
+  "services": {
+    "ec2Enhancement-12532786-d389-4453-a05b-9e77c6993c96": {
+      "calculationComponents": {
+        "tenancy": {
+          "value": "shared"
+        },
+        "selectedOS": {
+          "value": "windows"
+        },
+        "workloadSelection": {
+          "value": "consistent"
+        },
+        "storageType": {
+          "value": "Storage General Purpose gp3 GB Mo"
+        },
+        "dataTransferForEC2": {
+          "value": [
+            {
+              "entryType": "INBOUND",
+              "value": "",
+              "unit": "tb_month",
+              "fromRegion": ""
+            },
+            {
+              "entryType": "OUTBOUND",
+              "value": "",
+              "unit": "tb_month",
+              "toRegion": ""
+            },
+            {
+              "entryType": "INTRA_REGION",
+              "value": "",
+              "unit": "tb_month"
+            }
+          ]
+        },
+        "workload": {
+          "value": {
+            "workloadType": "consistent",
+            "data": "1"
+          }
+        },
+        "snapshotFrequency": {
+          "value": "30"
+        },
+        "detailedMonitoringCheckbox": {
+          "value": false
+        },
+        "ec2AdvancedPricingMetrics": {
+          "value": 1
+        },
+        "instanceType": {
+          "value": "t3.small"
+        },
+        "pricingStrategy": {
+          "value": {
+            "selectedOption": "on-demand",
+            "term": "1 year",
+            "utilizationValue": "100",
+            "utilizationUnit": "%Utilized/Month"
+          }
+        },
+        "storageAmount": {
+          "value": "500",
+          "unit": "gb|NA"
+        }
+      },
+      "serviceCode": "ec2Enhancement",
+      "region": "us-east-2",
+      "estimateFor": "template",
+      "version": "0.0.68",
+      "description": null,
+      "serviceCost": {
+        "monthly": 68.62,
+        "upfront": 0
+      },
+      "serviceName": "Amazon EC2",
+      "regionName": "US East (Ohio)",
+      "configSummary": "Tenancy (Shared Instances), Operating system (Windows Server), Workload (Consistent, Number of instances: 1), Advance EC2 instance (t3.small), Pricing strategy (On-Demand Utilization: 100 %Utilized/Month), Enable monitoring (disabled), EBS Storage amount (500 GB), DT Inbound: Not selected (0 TB per month), DT Outbound: Not selected (0 TB per month), DT Intra-Region: (0 TB per month)"
+    },
+    "ec2Enhancement-a742fad0-914d-441b-8908-3b58aefd8205": {
+      "calculationComponents": {
+        "tenancy": {
+          "value": "shared"
+        },
+        "selectedOS": {
+          "value": "linux"
+        },
+        "workloadSelection": {
+          "value": "consistent"
+        },
+        "storageType": {
+          "value": "Storage General Purpose gp3 GB Mo"
+        },
+        "dataTransferForEC2": {
+          "value": [
+            {
+              "entryType": "INBOUND",
+              "value": "",
+              "unit": "tb_month",
+              "fromRegion": ""
+            },
+            {
+              "entryType": "OUTBOUND",
+              "value": "",
+              "unit": "tb_month",
+              "toRegion": ""
+            },
+            {
+              "entryType": "INTRA_REGION",
+              "value": "",
+              "unit": "tb_month"
+            }
+          ]
+        },
+        "workload": {
+          "value": {
+            "workloadType": "consistent",
+            "data": "1"
+          }
+        },
+        "instanceType": {
+          "value": "r5.large"
+        },
+        "pricingStrategy": {
+          "value": {
+            "selectedOption": "standard",
+            "term": "3 Year",
+            "upfrontPayment": "None",
+            "model": "standard"
+          }
+        },
+        "snapshotFrequency": {
+          "value": "0"
+        },
+        "detailedMonitoringCheckbox": {
+          "value": false
+        },
+        "ec2AdvancedPricingMetrics": {
+          "value": 1
+        },
+        "storageAmount": {
+          "value": "100",
+          "unit": "gb|NA"
+        }
+      },
+      "serviceCode": "ec2Enhancement",
+      "region": "us-east-2",
+      "estimateFor": "template",
+      "version": "0.0.68",
+      "description": null,
+      "serviceCost": {
+        "monthly": 47.42,
+        "upfront": 0
+      },
+      "serviceName": "Amazon EC2",
+      "regionName": "US East (Ohio)",
+      "configSummary": "Tenancy (Shared Instances), Operating system (Linux), Workload (Consistent, Number of instances: 1), Advance EC2 instance (r5.large), Pricing strategy (Standard Reserved Instances 3yr  No Upfront), Enable monitoring (disabled), EBS Storage amount (100 GB), DT Inbound: Not selected (0 TB per month), DT Outbound: Not selected (0 TB per month), DT Intra-Region: (0 TB per month)"
+    },
+    "amazonRDSPostgreSQLDB-59f37471-29dd-4cf9-ab54-64d49c80b69c": {
+      "calculationComponents": {
+        "createRDSProxy": {
+          "value": "1"
+        },
+        "storageAmount": {
+          "value": "100",
+          "unit": "gb|NA"
+        },
+        "storageVolume": {
+          "value": "General Purpose"
+        },
+        "DatabaseInsightsSelected": {
+          "value": "1"
+        },
+        "retentionPeriod": {
+          "value": "0"
+        },
+        "addRDSExtendedSupport": {
+          "value": "1"
+        },
+        "RDSExtendedSupportYear": {
+          "value": "year12"
+        },
+        "columnFormIPM": {
+          "value": [
+            {
+              "Number of Nodes": {
+                "value": "1"
+              },
+              "Instance Type": {
+                "value": "db.m4.2xlarge"
+              },
+              "undefined": {
+                "value": {
+                  "unit": "100",
+                  "selectedId": "%Utilized/Month"
+                }
+              },
+              "Deployment Option": {
+                "value": "Multi-AZ"
+              },
+              "TermType": {
+                "value": "OnDemand"
+              }
+            }
+          ]
+        }
+      },
+      "serviceCode": "amazonRDSPostgreSQLDB",
+      "region": "us-east-2",
+      "estimateFor": "rdsForPostgreSQL",
+      "version": "0.0.110",
+      "description": null,
+      "serviceCost": {
+        "monthly": 1249.4,
+        "upfront": 0
+      },
+      "serviceName": "Amazon RDS for PostgreSQL",
+      "regionName": "US East (Ohio)",
+      "configSummary": "Storage amount (100 GB), Storage volume (General Purpose SSD (gp2)), Nodes (1), Instance Type (db.m4.2xlarge), Utilization (On-Demand only) (100 %Utilized/Month), Deployment Option (Multi-AZ), Pricing Model (OnDemand)"
+    },
+    "amazonSimpleStorageServiceGroup-3e92314f-37e8-4424-b349-14d82e8b4837": {
+      "version": "0.0.83",
+      "serviceCode": "amazonSimpleStorageServiceGroup",
+      "estimateFor": "simpleStorageServiceClassesGroup",
+      "region": "us-east-2",
+      "description": null,
+      "subServices": [
+        {
+          "calculationComponents": {
+            "moveToStorageClassMethod": {
+              "value": "No movement required"
+            },
+            "s3StandardStorageSize": {
+              "value": "1000",
+              "unit": "gb|month"
+            }
+          },
+          "serviceCode": "amazonS3Standard",
+          "region": "us-east-2",
+          "estimateFor": "s3Standard",
+          "version": "0.0.71",
+          "description": null,
+          "serviceCost": {
+            "monthly": 23,
+            "upfront": 0
+          }
+        },
+        {
+          "calculationComponents": {
+            "dataTransfer": {
+              "value": [
+                {
+                  "entryType": "INBOUND",
+                  "value": "100",
+                  "unit": "tb_month",
+                  "fromRegion": ""
+                },
+                {
+                  "entryType": "OUTBOUND",
+                  "value": "100",
+                  "unit": "tb_month",
+                  "toRegion": ""
+                }
+              ]
+            }
+          },
+          "serviceCode": "awsS3DataTransfer",
+          "region": "us-east-2",
+          "estimateFor": "awsS3DataTransfer",
+          "version": "0.0.27",
+          "description": null,
+          "serviceCost": {
+            "monthly": 0
+          }
+        }
+      ],
+      "serviceCost": {
+        "monthly": 23,
+        "upfront": 0
+      },
+      "serviceName": "Amazon Simple Storage Service (S3)",
+      "regionName": "US East (Ohio)",
+      "configSummary": "S3 Standard storage (1000 GB per month)"
+    },
+    "amazonVirtualPrivateCloud-b4b62fb3-a472-4eff-8d1d-aa53c4a7296b": {
+      "version": "0.0.101",
+      "serviceCode": "amazonVirtualPrivateCloud",
+      "estimateFor": "virtualPrivateCloudSubServiceSelector",
+      "region": "us-east-2",
+      "description": null,
+      "subServices": [
+        {
+          "calculationComponents": {
+            "averageDurationForEachConnection": {
+              "value": "24",
+              "unit": "perDay"
+            },
+            "vpnConnection_numberOfWorkDays": {
+              "value": "22"
+            },
+            "vpnConnection_clientAvgDuration": {
+              "value": "10",
+              "unit": "perDay"
+            },
+            "numberOfSiteToSiteVPNConnections": {
+              "value": "2"
+            }
+          },
+          "serviceCode": "vpnConnectionVpc",
+          "region": "us-east-2",
+          "estimateFor": "VPNConnection",
+          "version": "0.0.19",
+          "description": null,
+          "serviceCost": {
+            "monthly": 73
+          }
+        },
+        {
+          "calculationComponents": {
+            "numberOfTransitGatewayAttachments": {
+              "value": "10"
+            },
+            "dataProcessedPerTransitGatewayAttachment": {
+              "value": "10",
+              "unit": "gb|month"
+            }
+          },
+          "serviceCode": "transitGatewayVpc",
+          "region": "us-east-2",
+          "estimateFor": "transitGateway",
+          "version": "0.0.19",
+          "description": null,
+          "serviceCost": {
+            "monthly": 367
+          }
+        }
+      ],
+      "serviceCost": {
+        "monthly": 440
+      },
+      "serviceName": "Amazon Virtual Private Cloud (VPC)",
+      "regionName": "US East (Ohio)",
+      "configSummary": "Working days per month (22), Number of Site-to-Site VPN Connections (2) Number of Transit Gateway attachments (10)"
+    }
+  },
+  "groups": {},
+  "groupSubtotal": {
+    "monthly": 1828.44,
+    "upfront": 0
+  },
+  "totalCost": {
+    "monthly": 1828.44,
+    "upfront": 0
+  },
+  "support": {},
+  "metaData": {
+    "locale": "en_US",
+    "currency": "USD",
+    "createdOn": "2026-05-09T18:31:23.509Z",
+    "source": "calculator-platform"
+  }
+}
