@@ -1,19 +1,30 @@
 # aws-calc
 
-Generate populated, shareable `https://calculator.aws/#/estimate?id=...` links by calling the calculator's backend directly. Verdict: **yes**, the save endpoint is unauthenticated; the SPA recomputes prices from `calculationComponents` on load, so faithful estimates only require the right field shapes plus accurate Pricing API rates.
+Generate populated, shareable `https://calculator.aws/#/estimate?id=...` links by calling the calculator's backend directly. Save endpoint is unauthenticated; the SPA recomputes prices from `calculationComponents` on load, so faithful estimates only require the right field shapes plus accurate Pricing API rates.
 
-## Outputs
-
-- [`findings.md`](findings.md) — write-up: endpoints, auth, request/response schemas, share-URL derivation, replay instructions
-- [`poc/create_estimate.py`](poc/create_estimate.py) — minimal Python replay (input JSON → share URL)
-- **`~/.claude/skills/aws-calc/`** — Claude skill that turns a natural-language brief into a populated share URL by combining the AWS Price List API with the calculator's saveAs body shape. Supports EC2, RDS Postgres, S3, VPC; extension recipe in `references/service-modules/_template.md`. Smoke-tested end-to-end (Pricing API rates → skill formulas → SPA serviceCost match exactly: $68.62).
+This repo is the source of truth for the **aws-calc** Claude skill. The deployed copy at `~/.claude/skills/aws-calc/` is a mirror; deploy with `./deploy.sh`.
 
 ## Repo layout
 
-- `captures/` — HAR + extracted bundle/config used during discovery
-- `poc/` — Python replay script + sample saveAs body
-- `notes.md` — running observations from the spike
-- `findings.md` — final write-up
+- `SKILL.md` — skill entry point (read by Claude). Holds the workflow, versioned via the frontmatter `version` field.
+- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL).
+- `references/`
+  - `body-schema.md`, `url-spec.md`, `service-codes.md` — top-level conventions.
+  - `service-modules/` — one file per supported service (33 services as of v0.2.0). `_template.md` is the extension recipe.
+- `poc/` — minimal standalone Python replay (input JSON → share URL).
+- `captures/` — gitignored. HAR captures + extracted bundle/config used to derive `calculationComponents` shapes. `extract_saveas.py` streams a HAR and emits per-service saveAs bodies under `captures/saveAs/per-service/`.
+- `findings.md`, `notes.md` — original discovery write-up.
+- `deploy.sh` — rsync skill content (`SKILL.md`, `scripts/`, `references/`) to `~/.claude/skills/aws-calc/`.
+
+## Develop → deploy loop
+
+```
+# edit SKILL.md, scripts/, references/, bump SKILL.md version when shape changes
+./deploy.sh           # mirrors to ~/.claude/skills/aws-calc/
+git commit -am "..."
+```
+
+The `references/service-modules/_template.md` recipe and the `captures/saveAs/per-service/<serviceCode>.json` ground-truth files are how new service modules get added — anchor every new module to a real captured saveAs body, don't improvise shapes.
 
 ## Running the PoC standalone
 
