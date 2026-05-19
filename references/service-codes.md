@@ -22,9 +22,12 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 |---|---|---|
 | S3, S3 storage, S3 with data transfer | `amazonSimpleStorageServiceGroup` (group with `amazonS3Standard`, `awsS3DataTransfer`, etc. as sub-services) | [`service-modules/s3.md`](service-modules/s3.md) |
 | VPC, Site-to-Site VPN, Transit Gateway | `amazonVirtualPrivateCloud` (group with `vpnConnectionVpc`, `transitGatewayVpc`, etc. as sub-services) | [`service-modules/vpc.md`](service-modules/vpc.md) |
+| ELB, ALB, NLB, GWLB, Application/Network/Gateway Load Balancer (Classic LB NOT covered) — ALB LCU formula is the SPA's empirical bytes-additive variant, not AWS's documented max-across; tight quotes need a second capture | `elasticLoadBalancing` (group with `applicationLoadBalancer`, `networkLoadBalancer`, `gatewayLoadBalancer` sub-services) | [`service-modules/elb.md`](service-modules/elb.md) |
 | CloudFront — **Flat-Rate Plans only** (Free / Pro / Business / Premium subscription tiers); usage-based per-GB / per-request CDN pricing is NOT yet supported — capture HAR and add module before quoting metered CDN traffic | `amazonCloudFront` (`estimateFor: productPackd1`) | [`service-modules/cloudfront.md`](service-modules/cloudfront.md) |
 | FSx for Windows File Server — **`singleAZDeployment` only**; Multi-AZ Windows, Lustre, ONTAP, OpenZFS are NOT covered — capture and add a module before quoting them | `amazonFSx` (`estimateFor: singleAZDeployment`) | [`service-modules/fsx-windows.md`](service-modules/fsx-windows.md) |
 | ECR, Elastic Container Registry, image registry, container image storage — storage + outbound DT only; replication / Enhanced scanning / pull-through cache are NOT modeled | `amazonElasticContainerRegistry` (`estimateFor: template_0`) | [`service-modules/ecr.md`](service-modules/ecr.md) |
+| AWS Transfer Family — **Web Apps sub-service only**; SFTP/FTPS/FTP server endpoints and AS2/SFTP connectors are NOT yet captured. Don't quote anything but Web Apps without first capturing a HAR | `aWSTransferForSFTP` (lowercase `a`, uppercase `WS`; group with `webApps` sub-service) | [`service-modules/transfer-family.md`](service-modules/transfer-family.md) |
+| AWS Managed Microsoft AD, Directory Service, Active Directory — **AWS Managed Microsoft AD only**; AD Connector and Simple AD have different `estimateFor` values and are NOT covered. Unusual shape: `columnFormIPM_*` arrays of row objects with human-readable string keys (`"Directory Size"`, `"Number Of Addl Domain Controllers"`, etc.) | `aWSDirectoryService` (lowercase `a`, uppercase `WS`; `estimateFor: managedMicrosoftActiveDirectory`) | [`service-modules/directory-service.md`](service-modules/directory-service.md) |
 
 ### Security & governance
 
@@ -37,6 +40,7 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 | WAF, web ACL, web application firewall | `awsWebApplicationFirewall` | [`service-modules/waf.md`](service-modules/waf.md) |
 | GuardDuty, threat detection | `amazonGuardDuty` | [`service-modules/guardduty.md`](service-modules/guardduty.md) |
 | Inspector, vulnerability scanning, SAST/SCA/IaC | `amazonInspector` (v2) | [`service-modules/inspector.md`](service-modules/inspector.md) |
+| Systems Manager, SSM, Parameter Store, SSM Automation, Just-in-Time node access — **only those three sub-services covered**; Patch Manager / Run Command / OpsCenter / Change Manager / Incident Manager need a HAR before quoting. Parameter Store and Automation formulas are best-effort pending a second capture | `awsSystemsManager` (group with `awsSystemsManagerParameterStore`, `awsSystemsManagerAutomation`, `justInTimeNodeAccess` sub-services) | [`service-modules/systems-manager.md`](service-modules/systems-manager.md) |
 
 ### Streaming, messaging & queues
 
