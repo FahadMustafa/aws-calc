@@ -1,6 +1,6 @@
 ---
 name: aws-calc
-version: "0.3.0"
+version: "0.4.0"
 description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Looks up real prices via the AWS Price List API, builds the calculator's saveAs JSON shape, posts it to the calculator's public save endpoint, and returns the share URL plus a Markdown line-item breakdown. Use whenever the user wants a calculator.aws shareable estimate, a pricing-calculator link, a sharable AWS cost estimate URL, or asks to translate a workload description into something they can hand off in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Do not use for pure rightsizing-and-Excel-output workflows; route those to aws-pricing instead."
 ---
 

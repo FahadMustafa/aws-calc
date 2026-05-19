@@ -118,9 +118,30 @@ VPC is a **group** service: the line item has `subServices: [...]` for each pric
 
 This is **per-endpoint** × **per-AZ** billing. `numberOfAvailabilityZonesEndpointsDeployed` is the AZ count applied to every endpoint (the SPA doesn't allow per-endpoint AZ counts in this form); `dataProcessedByEachVPCENIAZ` is GB/month per ENI per AZ. The total endpoint-hours billed = `endpoints * AZs * 730`.
 
+### Public IPv4 Addresses (`publicIpv4Address`)
+
+```jsonc
+{
+  "serviceCode":  "publicIpv4Address",
+  "estimateFor":  "ipv4publicaddress",
+  "version":      "<TBD>",
+  "region":       "<code>",
+  "description":  null,
+  "calculationComponents": {
+    "numberOfInusepublicipv4address": {"value": "10"},
+    "numberOfIdlepublicipv4address":  {"value": "10"}
+  },
+  "serviceCost": { "monthly": <computed> }
+}
+```
+
+Field-name quirks to copy verbatim: both keys are all-lowercase after the camelCase prefix (`Inusepublicipv4address`, `Idlepublicipv4address`) — no separators or capitals inside `publicipv4address`. The SPA matches literally.
+
+In-use and idle IPs are billed at the **same** $0.005/IP-hour rate — the SPA splits them only because the AWS billing console reports them as separate line items.
+
 ### Other VPC sub-services seen in the manifest
 
-`gatewayLoadBalancerVpc`, `ipamVpc`, `networkAccessAnalyzerVpc`, `reachabilityAnalyzerVpc`, `trafficMirroringVpc`, `vpcRouteServer`, `cloudWan`, `publicIpv4Address`. The serviceCode is the JSON key name; estimateFor varies. Capture a HAR and add a section above before pricing.
+`gatewayLoadBalancerVpc`, `ipamVpc`, `networkAccessAnalyzerVpc`, `reachabilityAnalyzerVpc`, `trafficMirroringVpc`, `vpcRouteServer`, `cloudWan`. The serviceCode is the JSON key name; estimateFor varies. Capture a HAR and add a section above before pricing.
 
 ## Pricing API filters
 
@@ -176,6 +197,16 @@ Filter further by `transferType` to get the right SKU: `AWS Outbound` (internet 
 
 Two SKUs: per-VPC-endpoint-hour (`VpcEndpoint-Hours`) and per-GB processed (`VpcEndpoint-Bytes`).
 
+### Public IPv4 Addresses
+
+```
+--service-code AmazonVPC
+--filter groupDescription="Public IPv4 Address"
+--filter regionCode=<region>
+```
+
+Single SKU: `PublicIPv4:InUseAddress` (per-hour). The same rate applies to idle and in-use IPs.
+
 `get-attribute-values --service-code AmazonVPC --attribute groupDescription` lists the valid VPC `groupDescription` strings.
 
 ## Multipliers / formula
@@ -207,11 +238,16 @@ PrivateLink data       = privatelink_per_gb
                                 * numberOfAvailabilityZonesEndpointsDeployed
                                 * dataProcessedByEachVPCENIAZ        # GB/month
 
+Public IPv4 monthly    = (numberOfInusepublicipv4address + numberOfIdlepublicipv4address)
+                                * 730 * public_ipv4_per_hour_rate    # $0.005/IP-hour
+
 sub.serviceCost.monthly = the relevant sum
 group.serviceCost.monthly = sum of all sub.serviceCost.monthly
 ```
 
-Verified at eu-west-1: `awsPrivateLinkVpc` with 10 endpoints × 10 AZs × 10 GB/month → `10 * 10 * 730 * $0.011 + 10 * 10 * 10 * $0.01 = $803.00 + $1.00 = $804.00` against captured `$803.10` (within $0.90 — likely a $0.0109/h endpoint rate, not flat $0.011).
+Verified at eu-west-1:
+- `awsPrivateLinkVpc` with 10 endpoints × 10 AZs × 10 GB/month → `10 * 10 * 730 * $0.011 + 10 * 10 * 10 * $0.01 = $803.00 + $1.00 = $804.00` against captured `$803.10` (within $0.90 — likely a $0.0109/h endpoint rate, not flat $0.011).
+- `publicIpv4Address` with 10 idle + 10 in-use → `(10 + 10) * 730 * $0.005 = $73.00` against captured `$73.00`. **Matches exactly.**
 
 The captured estimate's S2S VPN priced at $73/mo for 2 connections × 24h × 22 days — that's roughly `0.05 * 2 * 24 * 22 ≈ $52.80/mo` for the connection-hour rate, plus tunnel-hours; the SPA's exact formula has nuance. Use the SPA's value as ground truth when possible (re-derive after capture).
 
@@ -226,6 +262,8 @@ The captured estimate's S2S VPN priced at $73/mo for 2 connections × 24h × 22 
 | numberOfInterfaceVPCEndpointsPerRegion | "0" (omit `awsPrivateLinkVpc` entirely if not mentioned) |
 | numberOfAvailabilityZonesEndpointsDeployed | match the user's `numberOfAvailabilityZones` for the VPC; default `"2"` if unspecified |
 | dataProcessedByEachVPCENIAZ | "1" (GB/month per ENI per AZ) — low but non-zero; flag the assumption |
+| numberOfInusepublicipv4address | "0" (omit `publicIpv4Address` sub-service if not mentioned) | Only include when user mentions Elastic IPs or public IPv4 addresses |
+| numberOfIdlepublicipv4address | "0" | Same rate as in-use; split only because the billing console reports them separately |
 
 If the user mentions "Site-to-Site VPN" without a count, default to 1. If they mention "PrivateLink" or "interface endpoint(s)" without a count, default to 1 endpoint × `numberOfAvailabilityZonesEndpointsDeployed` AZs.
 
