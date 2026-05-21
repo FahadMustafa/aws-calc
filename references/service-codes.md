@@ -30,6 +30,12 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 | AWS Managed Microsoft AD, Directory Service, Active Directory — **AWS Managed Microsoft AD only**; AD Connector and Simple AD have different `estimateFor` values and are NOT covered. Unusual shape: `columnFormIPM_*` arrays of row objects with human-readable string keys (`"Directory Size"`, `"Number Of Addl Domain Controllers"`, etc.) | `aWSDirectoryService` (lowercase `a`, uppercase `WS`; `estimateFor: managedMicrosoftActiveDirectory`) | [`service-modules/directory-service.md`](service-modules/directory-service.md) |
 | Direct Connect, DX, dedicated network, private connection to AWS — **Dedicated ports captured**; hosted/sub-1G ports have the same shape but rates not yet verified. `region` field is decorative; pricing follows the `port:Direct Connect Location` colocation site | `awsDirectConnect` (`estimateFor: template`, flat shape with `columnFormIPM` row-objects + top-level `dataTransferOut` / `datatransferin` / `utilization`) | [`service-modules/direct-connect.md`](service-modules/direct-connect.md) |
 
+### AI / ML
+
+| User says | SPA serviceCode | Module |
+|---|---|---|
+| Bedrock, Claude on Bedrock, LLM inference — **Anthropic In-Region On-Demand Standard only** with one known model token; cross-region, Provisioned Throughput, Batch, and non-Anthropic providers (Nova/Cohere/Meta/AI21/Mistral/Stability) are NOT covered. `modelSelectionIRstan` + `selectedModelIRstan` + `cacheReadIRstan` + `cacheWriteIRstan` are opaque tokens — capture HAR per model | `amazonBedrock` (`estimateFor: amazonBedrockClassesGroup`, group with `anthropic` sub-service) | [`service-modules/bedrock.md`](service-modules/bedrock.md) |
+
 ### Security & governance
 
 | User says | SPA serviceCode | Module |
@@ -41,6 +47,7 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 | WAF, web ACL, web application firewall | `awsWebApplicationFirewall` | [`service-modules/waf.md`](service-modules/waf.md) |
 | GuardDuty, threat detection | `amazonGuardDuty` | [`service-modules/guardduty.md`](service-modules/guardduty.md) |
 | Inspector, vulnerability scanning, SAST/SCA/IaC | `amazonInspector` (v2) | [`service-modules/inspector.md`](service-modules/inspector.md) |
+| KMS, Key Management Service, customer-managed CMK, encryption key requests — **customer-managed CMKs + request volume only**; XKS / HMAC keys / CloudHSM custom key stores are NOT covered. `numberOfAsymmetricRsaRequests` is RSA-2048 only; RSA-3072/4096 + ECC sign/verify roll up under `numberOfAsymmetricRequestsExceptRsa2048` | `awsKeyManagementService` (`estimateFor: kms`, flat shape) | [`service-modules/kms.md`](service-modules/kms.md) |
 | Systems Manager, SSM, Parameter Store, SSM Automation, Just-in-Time node access — **only those three sub-services covered**; Patch Manager / Run Command / OpsCenter / Change Manager / Incident Manager need a HAR before quoting. Parameter Store and Automation formulas are best-effort pending a second capture | `awsSystemsManager` (group with `awsSystemsManagerParameterStore`, `awsSystemsManagerAutomation`, `justInTimeNodeAccess` sub-services) | [`service-modules/systems-manager.md`](service-modules/systems-manager.md) |
 | Shield, Shield Advanced, DDoS protection — **Shield Advanced only** (Standard is free, no line item); base $3,000/month subscription IS included in serviceCost; org-level subscription handling is NOT modeled — ask if user is in an AWS Organization | `awsShield` (`estimateFor: template`, flat shape; cc has top-level `cloudFrontUsage`, `LoadBalancingUsage` (PascalCase outlier), `elasticIpUsage`, `globalAcceleratorUsage` in tb\|month) | [`service-modules/shield.md`](service-modules/shield.md) |
 
@@ -52,6 +59,7 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 | Data Firehose, Kinesis Firehose | `amazonKinesisFirehose` | [`service-modules/kinesis-firehose.md`](service-modules/kinesis-firehose.md) |
 | SNS, topic, notification | `amazonSimpleNotificationService` (group with `standardTopics` + `fifoTopics` sub-services) | [`service-modules/sns.md`](service-modules/sns.md) |
 | SQS, queue | `amazonSimpleQueueService` | [`service-modules/sqs.md`](service-modules/sqs.md) |
+| Amazon MQ, ActiveMQ, RabbitMQ, message broker — 4 paths: RabbitMQ Cluster (verified, `rabbitMQBroker`, opaque instance-type tokens — only `mq.m5.large` token known), ActiveMQ Single Instance (inferred from bundle.js, `singleInstanceBroker`, readable instance ids), ActiveMQ Active/Standby (inferred, `activeInstanceBroker`), RabbitMQ Single Instance (unknown — refuse without HAR) | `amazonMQ` (multiple `estimateFor` values — see module's Coverage matrix) | [`service-modules/amazon-mq.md`](service-modules/amazon-mq.md) |
 
 ### Developer tools & CI/CD
 

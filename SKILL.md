@@ -1,6 +1,6 @@
 ---
 name: aws-calc
-version: "0.4.0"
+version: "0.6.1"
 description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Looks up real prices via the AWS Price List API, builds the calculator's saveAs JSON shape, posts it to the calculator's public save endpoint, and returns the share URL plus a Markdown line-item breakdown. Use whenever the user wants a calculator.aws shareable estimate, a pricing-calculator link, a sharable AWS cost estimate URL, or asks to translate a workload description into something they can hand off in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Do not use for pure rightsizing-and-Excel-output workflows; route those to aws-pricing instead."
 ---
 
@@ -41,7 +41,9 @@ Break the brief into one entry per service line item. Each entry needs: a target
 
 If a service in the brief is not in `references/service-modules/`, mark it unsupported and follow the rule above.
 
-Report: `Step 1: Parsed [N] line items across [M] services. Defaults applied to [list of fields]. Unsupported: [list or "none"].`
+Also note **grouping intent**: if the user describes the workload in terms of buckets, teams, environments, projects, clients, or applications (e.g. "for the prod stack...", "for the dev sandbox...", "for client A and client B..."), capture which line items belong to which bucket — you'll emit those as calculator **Groups** in step 5. If no bucketing is mentioned, emit no groups.
+
+Report: `Step 1: Parsed [N] line items across [M] services. Defaults applied to [list of fields]. Unsupported: [list or "none"]. Groups: [list of group names or "none"].`
 </step>
 
 <step n="2" name="Read the relevant service modules">
@@ -73,12 +75,13 @@ Build the line item's `calculationComponents` exactly per the module — field n
 </step>
 
 <step n="5" name="Assemble the saveAs body">
-Read `references/body-schema.md` once if you don't already have the top-level shape in mind.
+Read `references/body-schema.md` once if you don't already have the top-level shape in mind — in particular the "Groups" section if step 1 captured any grouping intent.
 
 Construct:
-- `services`: object keyed by `<serviceCode>-<UUID>` (uuid4, lowercase, hyphenated). Each value is the per-line-item object with the calculationComponents you built and the serviceCost you computed.
-- `groups`: `{}` unless the user grouped line items
-- `groupSubtotal`, `totalCost`: sum of all `services[*].serviceCost`
+- `services`: object keyed by `<serviceCode>-<UUID>` (uuid4, lowercase, hyphenated). Each value is the per-line-item object with the calculationComponents you built and the serviceCost you computed. **Only ungrouped line items go here**; grouped line items live inside their group's `services` dict instead.
+- `groups`: `{}` if step 1 found no grouping intent; otherwise one entry per group keyed by `<groupName>-<uuid4>` (the SPA's convention — the `<groupName>` segment of the key must equal the group's `name` field). Each group has `{name, services, groups: {} for leaf, groupSubtotal, totalCost}` — see `references/body-schema.md` for the recursive shape and the bottom-up subtotal arithmetic.
+- `groupSubtotal`: sum of **top-level** `services[*].serviceCost.monthly` only (does **not** include grouped line items). If every line item is grouped, this is `{monthly: 0}`.
+- `totalCost`: `body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`. The `upfront` total sums the same way across reserved-capacity line items.
 - `support`: `{}`
 - `metaData`: `{locale: "en_US", currency: "USD", createdOn: <UTC ISO with milliseconds>, source: "calculator-platform"}`
 - `name`: the user's requested estimate name, or "AWS Estimate <ISO date>" if they didn't specify one
@@ -154,6 +157,8 @@ https://calculator.aws/#/estimate?id=&lt;40-hex&gt;
 - Get `calculationComponents` field names and types right; the SPA is strict.
 - `serviceCost` accuracy matters for the breakdown you show the user (and for any caller that reads the saved JSON via the load endpoint), not for what the recipient sees in their browser.
 
+**Never use the "override serviceCost to paper over wrong cc" anti-pattern.** When a module's shape doesn't cover a configuration the user asked for, it can be tempting to: (a) emit cc with a known-but-wrong opaque token (e.g. a different instance type's token from the same service) and (b) write the correct `serviceCost.monthly` you computed from the Pricing API into the body. This produces a broken estimate — the SPA ignores your `serviceCost` and recomputes from cc when the user opens the link, and a wrong/unrecognized opaque token typically renders as `$0.00`. The user sees a $0 line item even though your local breakdown says $1,234. Always either: emit a fully-shape-correct line item, or refuse that line and tell the user what's needed (usually a fresh HAR for the missing configuration). Skipping a line is better than poisoning the estimate with a wrong-but-plausible one.
+
 **On write actions**: The save endpoint is a public AWS write. Treat it like any other shared-systems write — do not produce many speculative estimates in a loop without a reason. One request per task is the expected pattern.
 
-**On unsupported services**: New services need a module under `references/service-modules/`. Until then, refuse politely and offer to gather the data needed to add one (a captured HAR for that service, plus the Pricing API filters that resolve its SKU).
+**On unsupported services or configurations**: New services need a module under `references/service-modules/`. Until then, refuse politely and offer to gather the data needed to add one (a captured HAR for that service, plus the Pricing API filters that resolve its SKU). For partially-supported services (e.g. only some templates/sub-services captured), the module should list each path's coverage explicitly — quote what's covered, refuse what isn't, and offer to extend with a targeted HAR for the missing path.
