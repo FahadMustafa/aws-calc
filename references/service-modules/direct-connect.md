@@ -81,6 +81,8 @@ total          = $32,850.28                                 # ✓ matches exactl
 
 The $0.028/GB DT rate above is back-calculated from the capture (line item shows total $32,850.28, port subtotal $32,850.00). Confirm via Pricing API before quoting other source-region / DX-location combos — DT out rates vary substantially across pairings.
 
+> **CAVEAT — do not quote from the baked-in table.** The port-hour rates ($22.50/h for 100G, $0.30/h for 1G) vary by DX colocation/location, and the $0.028/GB DX egress was inferred from a tiny **10 GB** capture where rounding noise dominates the residual ($0.28 / 10 GB), so the per-GB figure is essentially noise. **ALWAYS** resolve both SKUs live before quoting: the port-hour SKU (`usagetype` like `*-DCPortUsage:*`, keyed to the chosen capacity and DX location) and the DX outbound-DT SKU (`productFamily=Data Transfer`, `transferType=AWS Outbound (DX)`, per source AWS region / DX location). Never quote from the hardcoded numbers above.
+
 ## configSummary template
 
 Match the captured phrasing exactly — semicolon-free, parenthesized values, free DT-in noted in line:

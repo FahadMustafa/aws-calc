@@ -212,7 +212,15 @@ read_io_per_mo  = totalReads_BaseIO * 3600 * hours_per_mo
 peak_write_io   = totalWrites_PeakIO * 3600 * durationPeakWriteId           # peak hours only
 base_write_io   = totalWrites_PeakIO * 3600 * (hours_per_mo - durationPeakWriteId) * 0.5  # rough base estimate
 io_monthly      = io_rate * (read_io_per_mo + peak_write_io + base_write_io)
-# NOTE: the SPA's exact IO model is not fully reverse-engineered; verify before relying on this.
+# WARNING: the SPA's exact IO model is NOT reverse-engineered (note the `* 0.5` "rough base
+# estimate" above). For write/read-heavy clusters, Aurora Standard I/O can be the dominant cost,
+# so an unverified model can be off by large factors. Do ONE of:
+#   (a) keep totalReads_BaseIO / totalWrites_PeakIO at "1" (near-zero IO) when the user has no
+#       IO estimate, and state that IO is excluded; or
+#   (b) steer the user to edition=auroraIOOptimized, where per-IO is bundled (io_rate=0) and this
+#       whole risk disappears (compare total cost both ways); or
+#   (c) capture a HAR with real IO values and re-derive before quoting an IO-heavy Standard cluster.
+# Do not hand off a computed IO cost for a non-trivial IO workload as if it were accurate.
 
 # Backups & exports:
 backup_monthly  = backup_rate * additionalBackupStorage

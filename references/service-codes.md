@@ -12,7 +12,7 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 |---|---|---|
 | EC2, Linux/Windows VM, instance | `ec2Enhancement` | [`service-modules/ec2.md`](service-modules/ec2.md) |
 | RDS PostgreSQL, Postgres database | `amazonRDSPostgreSQLDB` | [`service-modules/rds-postgres.md`](service-modules/rds-postgres.md) |
-| RDS SQL Server, MS SQL on RDS | `amazonRDSForSQLServer` (note: `estimateFor` is the literal string `"rdsForOracle"` — SPA reuses the Oracle form) | [`service-modules/rds-sqlserver.md`](service-modules/rds-sqlserver.md) |
+| RDS SQL Server, MS SQL on RDS — **recompute-fragile**: SPA reuses the Oracle form (`estimateFor: "rdsForOracle"`) with a no-id `"undefined"` utilization column and deep dependent dropdown chains. Illegal/edge combos (BYOL+Web, BYOL+Express, a Reserved term for an edition/region with no RI SKU) make the recipient's "Update" fail. Validate the combo before emitting — see the module's "Recompute fragility" section | `amazonRDSForSQLServer` (`estimateFor` is the literal string `"rdsForOracle"`) | [`service-modules/rds-sqlserver.md`](service-modules/rds-sqlserver.md) |
 | Fargate, ECS tasks, serverless containers, EKS pods on Fargate — **Linux x86 On-Demand only**; Linux ARM, Windows, Fargate Spot, and ephemeral storage > 20 GB/task are NOT yet round-tripped (Pricing API rates documented for ARM/Windows; capture HAR before quoting them or Spot) | `awsFargate` (`estimateFor: template`) | [`service-modules/fargate.md`](service-modules/fargate.md) |
 | EKS, Elastic Kubernetes Service, K8s control plane, EKS Hybrid Nodes, ArgoCD/ACK/KRO platform capabilities — covers control plane (Standard + Extended Support), Hybrid Nodes (per-vCPU tiered), and the EKS Capabilities add-ons; **EKS Auto Mode NOT captured**, **EC2 worker nodes** must be billed via the `ec2Enhancement` module, **Fargate pods on EKS** via `awsFargate` | `awsEks` (`estimateFor` is the literal `"Amazon EKS"` — with a space, not a form-id slug) | [`service-modules/eks.md`](service-modules/eks.md) |
 
@@ -59,7 +59,7 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 | Data Firehose, Kinesis Firehose | `amazonKinesisFirehose` | [`service-modules/kinesis-firehose.md`](service-modules/kinesis-firehose.md) |
 | SNS, topic, notification | `amazonSimpleNotificationService` (group with `standardTopics` + `fifoTopics` sub-services) | [`service-modules/sns.md`](service-modules/sns.md) |
 | SQS, queue | `amazonSimpleQueueService` | [`service-modules/sqs.md`](service-modules/sqs.md) |
-| Amazon MQ, ActiveMQ, RabbitMQ, message broker — 4 paths: RabbitMQ Cluster (verified, `rabbitMQBroker`, opaque instance-type tokens — only `mq.m5.large` token known), ActiveMQ Single Instance (inferred from bundle.js, `singleInstanceBroker`, readable instance ids), ActiveMQ Active/Standby (inferred, `activeInstanceBroker`), RabbitMQ Single Instance (unknown — refuse without HAR) | `amazonMQ` (multiple `estimateFor` values — see module's Coverage matrix) | [`service-modules/amazon-mq.md`](service-modules/amazon-mq.md) |
+| Amazon MQ, ActiveMQ, RabbitMQ, message broker — 4 paths: RabbitMQ Cluster (Verified), ActiveMQ Single Instance + Active/Standby (Inferred from bundle.js + mq.json catalog), RabbitMQ Single Instance (Inferred — token table available, cc shape speculative). Full RegionlessRateCode → friendly key table for all 23 ActiveMQ + RabbitMQ instance/mode combos is embedded in the module (resolvable via `scripts/resolve_token.py mq`) | `amazonMQ` (multiple `estimateFor` values — see module's Coverage matrix) | [`service-modules/amazon-mq.md`](service-modules/amazon-mq.md) |
 
 ### Developer tools & CI/CD
 
@@ -70,6 +70,8 @@ All modules below have been verified end-to-end: the formulas reproduce the capt
 | CodeBuild, managed build runners, CI build minutes | `awsCodeBuild` (**On-Demand EC2 fleet only**; Lambda / Windows / Reserved / GPU / macOS fleets are NOT yet captured — capture HAR and extend module before quoting them) | [`service-modules/codebuild.md`](service-modules/codebuild.md) |
 
 ## Not yet supported
+
+**RDS for Oracle** — no module. Oracle shares the `rdsForOracle` form with RDS SQL Server but has its own `serviceCode`, license models (BYOL / LI), and editions (SE2/EE), none of which are captured. Refuse Oracle RDS line items and offer to capture a HAR to build the module — do not try to price Oracle through the SQL Server module.
 
 The AWS Pricing Calculator covers 436 services. Coverage in this skill grows as modules are written. If the user's brief references a service not in the table above, follow the rule in `SKILL.md` (Step 1 / "When the user's brief covers a service you don't have a module for"): name the unsupported items, propose to skip or add a module, and let the user decide.
 

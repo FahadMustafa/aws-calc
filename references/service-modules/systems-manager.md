@@ -171,6 +171,7 @@ If the user says "Systems Manager" without specifics, ask which capability (Para
 ## Verification
 
 - Captured HAR: `captures/calculator.aws_new_3.har` → `captures/saveAs/per-service/awsSystemsManager.json` (eu-west-1, single line item, 3 sub-services).
+- **Group `serviceCost.monthly = $2,197.08`** = Parameter Store `$2,195.11` + Automation `$0.60` + JIT `$1.37`. Do not confuse the Parameter Store sub-service ($2,195.11) with the group total ($2,197.08) — the group envelope sums all three sub-services.
 - JIT formula matches capture exactly ($1.37).
 - Parameter Store formula reconstructs $2,165 of the captured $2,195.11 — $30 gap likely from higher-throughput-tier standard ops; **need a second capture** with API interactions = 0 to isolate the storage SKU.
 - Automation formula does NOT cleanly reconstruct the captured $0.60 — the lambda-compute-per-step cost dominates in any reasonable construction but lands above $0.60; **need a second capture** with `numberOfAWSExecuteSteps=0` to isolate playbook storage from script execution.

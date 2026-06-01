@@ -93,6 +93,8 @@ total           = $474.50
 
 Captured `$481.80` is $7.30 higher — the eu-west-1 rates differ slightly from the assumed US rates. **Pull live rates from the Pricing API and re-derive before quoting.** The shape is verified; the exact per-region per-size rate table needs to come from `get-products`, not memory.
 
+> **CAVEAT — Directory Service is expensive; the hourly rates above are illustrative US-only.** The hardcoded per-hour edition rates (Enterprise hosting $0.40/h, additional DC $0.20/h, shared account $0.05/h) are assumed US numbers and already miss the captured eu-west-1 total by ~$7.30. A small directory runs hundreds of dollars/month, so rate error compounds fast. **NEVER quote without running `get-products` for the user's exact region and edition** (Standard vs Enterprise) and re-deriving from the live rates.
+
 ## configSummary template
 
 Match captured phrasing exactly — the SPA reads this for the line-item card title:

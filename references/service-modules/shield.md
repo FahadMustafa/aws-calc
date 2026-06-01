@@ -60,6 +60,8 @@ ddos_dt_monthly     = sum over each resource type of:
 serviceCost.monthly = shield_base_monthly + ddos_dt_monthly
 ```
 
+> **Re-verify on version bump.** The $3,000/month base is a FIXED AWS price hardcoded here (acceptable, since there is no per-region or per-usage variation), but confirm it against the Pricing API (`usagetype` containing `Subscription`) at quote time and re-check it whenever the form `version` changes. Org-level double-count risk: Shield Advanced is billed once per organization, so do NOT add another $3,000 for a sub-account that's already covered by an org-wide subscription (see the per-organization note under Defaults).
+
 Tiered DT rates per GB (first tier 0-100 TB; **verify with `get-products` before quoting at higher tiers**):
 
 | Resource type | First-tier rate per GB (approx) |
@@ -81,6 +83,8 @@ total                        = $3,153.60   ✓ matches exactly
 ```
 
 The base subscription **is** included in `serviceCost.monthly` — the working assumption is now verified by the dollar arithmetic. The exact per-GB rates need confirmation from the live Pricing API; the breakdown above is best-fit reconstruction from one capture, and the ELB/EIP rates above are not the published headline numbers ($0.05/GB), suggesting the SPA may apply a different tier or that 1 TB is internally 1024 GB while my back-calc assumed 1000 GB. Re-derive with a second capture (e.g. only `cloudFrontUsage` set, all others zero) to isolate each per-resource rate.
+
+> **CAVEAT — inferred per-GB rates.** The ~$0.0375/GB ELB/EIP rates (and the per-GB CF/GA rates) are back-calculated from ONE uniform capture (1 TB across all four resource types at once) and do **not** match the published $0.05/GB headline. They are likely wrong for any non-uniform CloudFront/ELB/EIP/Global-Accelerator mix. Confirm by capturing a single-resource-non-zero estimate per resource type before quoting a non-uniform mix. The 1000-vs-1024 TB->GB conversion factor is also **unresolved** — the reconstruction can't tell whether the SPA treats 1 TB as 1000 GB or 1024 GB, which shifts every per-GB rate. Pull live rates and re-derive rather than trusting the table above.
 
 ## configSummary template
 

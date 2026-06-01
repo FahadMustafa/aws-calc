@@ -1,6 +1,6 @@
 ---
 name: aws-calc
-version: "0.6.1"
+version: "0.8.0"
 description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Looks up real prices via the AWS Price List API, builds the calculator's saveAs JSON shape, posts it to the calculator's public save endpoint, and returns the share URL plus a Markdown line-item breakdown. Use whenever the user wants a calculator.aws shareable estimate, a pricing-calculator link, a sharable AWS cost estimate URL, or asks to translate a workload description into something they can hand off in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Do not use for pure rightsizing-and-Excel-output workflows; route those to aws-pricing instead."
 ---
 
@@ -23,6 +23,7 @@ This skill exists because driving the calculator.aws SPA with browser automation
 - This skill's directory layout (locate it by globbing for this `SKILL.md`, then resolve siblings):
     - `scripts/pricing_client.py` — Price List API queries (always use this, never write a parallel one)
     - `scripts/create_estimate.py` — POSTs the saveAs body and prints the share URL
+    - `scripts/resolve_token.py` — resolves the SPA's opaque cc tokens (e.g. for Amazon MQ) by fetching the public `meteredUnitMaps` catalog; see `references/opaque-tokens.md`
     - `references/url-spec.md` — endpoint contracts for save / load / share URL
     - `references/body-schema.md` — top-level shape of the saveAs JSON
     - `references/service-modules/` — one file per supported service: `calculationComponents` shape, Pricing API filters, multipliers
@@ -91,10 +92,14 @@ Construct:
 Write the saveAs body to a temp JSON file, then run `scripts/create_estimate.py <path>`. The script prints the share URL on stdout and exits 0 on success. Capture the URL.
 </step>
 
-<step n="7" name="Verify the round-trip">
+<step n="7" name="Verify the round-trip (storage only — does NOT test recompute)">
 Curl the load endpoint for the new key (`https://d3knqfixx3sbls.cloudfront.net/<savedKey>`) and confirm HTTP 200 plus a non-empty body. If the load fails, the share URL will not render — surface the failure rather than handing the user a dead link.
 
-Report: `Verified: load endpoint returns [N] bytes for the new estimate.`
+**This check only confirms the JSON was stored.** It does **not** exercise the SPA's recompute, so it cannot catch a cc shape that errors on the recipient's "Update", a wrong opaque token that renders `$0`, or a form `version`/`estimateFor` that has drifted. Do not report a line item as "verified accurate" on the strength of this check alone. Word the report honestly:
+
+Report: `Saved + load-confirmed: load endpoint returns [N] bytes. (Storage verified; recompute not tested — see step 8 invariant.)`
+
+For services with known-fragile recompute paths (RDS for Oracle / SQL Server — see those modules) or opaque tokens (Bedrock, Amazon MQ), recompute-validate before handing over: drive the live SPA headlessly (Playwright, via the `webapp-testing` skill), open the share URL, click **Update**, and assert no "incompatible with your original inputs" error and that every non-zero-usage line still shows a non-zero cost.
 </step>
 
 <step n="8" name="Present the result">
@@ -153,11 +158,14 @@ https://calculator.aws/#/estimate?id=&lt;40-hex&gt;
 
 **On parallel tool calls**: When a step spawns independent reads (multiple service modules, multiple Pricing API queries, multiple Read calls), issue them in the same turn rather than sequentially. Each get-products call takes ~1–3 seconds; serializing them across a five-service estimate adds avoidable latency.
 
-**On accuracy vs. speed tradeoffs**: The SPA recomputes prices from `calculationComponents` when the share URL is opened — so the values you store in `serviceCost` are seed values, not the final display. The recipient's view will reflect whatever the SPA's bundled calculator computes from your `calculationComponents`. This means:
-- Get `calculationComponents` field names and types right; the SPA is strict.
-- `serviceCost` accuracy matters for the breakdown you show the user (and for any caller that reads the saved JSON via the load endpoint), not for what the recipient sees in their browser.
+**On what the recipient actually sees (both `serviceCost` and `calculationComponents` must be correct)**: When the share URL is opened, the SPA displays the **stored** `serviceCost`/`totalCost` verbatim — it does **not** silently recompute. Recompute is **user-initiated**: the SPA shows a "prices may be out of date / update this service" affordance, and only when the recipient clicks **Update** does it re-derive each line from `calculationComponents` against the current Price List API. (Evidence in the bundle: `oldServiceCost`/`oldConfigSummary` snapshots, `checkForUpdates`/`priceUpdated` flags, and a ~1-year staleness threshold.) Implications:
+- **`serviceCost` is the default display.** A recipient who never clicks Update sees exactly the numbers you stored. So `serviceCost` accuracy is first-class — compute it correctly from the Pricing API, do not treat it as a throwaway seed.
+- **`calculationComponents` must survive a recompute.** Get field names, types, `version`, and `estimateFor` right; the SPA is strict. A malformed/incompatible cc, or a wrong opaque token, makes Update either render `$0` or fail with *"This service in your estimate isn't compatible with your original inputs"* — leaving the recipient with a broken line they cannot fix.
+- **Both must agree.** If your stored `serviceCost` and what the cc would recompute to diverge wildly, the estimate visibly "jumps" when the recipient clicks Update. Keep them consistent: the `serviceCost` you store should equal what the cc recomputes to at today's prices.
 
 **Never use the "override serviceCost to paper over wrong cc" anti-pattern.** When a module's shape doesn't cover a configuration the user asked for, it can be tempting to: (a) emit cc with a known-but-wrong opaque token (e.g. a different instance type's token from the same service) and (b) write the correct `serviceCost.monthly` you computed from the Pricing API into the body. This produces a broken estimate — the SPA ignores your `serviceCost` and recomputes from cc when the user opens the link, and a wrong/unrecognized opaque token typically renders as `$0.00`. The user sees a $0 line item even though your local breakdown says $1,234. Always either: emit a fully-shape-correct line item, or refuse that line and tell the user what's needed (usually a fresh HAR for the missing configuration). Skipping a line is better than poisoning the estimate with a wrong-but-plausible one.
+
+**Invariant — non-zero usage must yield non-zero cost**: Before assembling the body, sanity-check every line item: if the user specified non-zero usage for a line (instances > 0, storage > 0 GB, requests > 0, tokens > 0, …) but your computed `serviceCost.monthly` is `0.00`, **stop** — you almost certainly hit a silent failure (a wrong/unknown opaque token, an inferred-but-wrong cc field name, an empty data-transfer destination, or a zero-rate SKU lookup). Do not ship a `$0` line for real usage; either fix the lookup/shape or refuse that line and tell the user what's missing. `scripts/create_estimate.py` prints a warning listing any `$0` line items as a backstop, but catch these during step 4, not after the POST. (Genuinely-free lines — e.g. CodeDeploy on EC2, inbound-only data transfer — are fine; the point is to never pass off a *miscomputed* zero as a real price.)
 
 **On write actions**: The save endpoint is a public AWS write. Treat it like any other shared-systems write — do not produce many speculative estimates in a loop without a reason. One request per task is the expected pattern.
 

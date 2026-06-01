@@ -199,8 +199,10 @@ Each SKU returns:
 ```
 
 Two SKUs returned:
-- `volumeType=Amazon DynamoDB - Indexed DataStore` → Standard table class. Tiered: `[0, 25]` GB-Mo @ `$0` (free tier), `[25, Inf]` GB-Mo @ `$0.25` in us-east-2.
+- `volumeType=Amazon DynamoDB - Indexed DataStore` → Standard table class. The Price List API exposes a tiered SKU (`[0, 25]` GB-Mo @ `$0`, `[25, Inf]` GB-Mo @ `$0.25` in us-east-2), **but the calculator does NOT apply the 25 GB free tier** — it bills storage flat at `$0.25/GB-Mo` from the first GB.
 - `volumeType=Amazon DynamoDB - Indexed DataStore - IA` → Standard-IA table class. Flat `$0.10/GB-Mo` in us-east-2.
+
+> **Do not subtract the 25 GB free tier from DynamoDB storage.** Verified against two captures: the on-demand line bills `10 GB × $0.25 = $2.50` (not `max(0, 10-25)×$0.25 = $0`). Applying the free-tier band under-states every table < 25 GB by up to $6.25/mo per sub-service and makes the totals fail to reconcile with the SPA. Use the flat per-GB rate in `storage_monthly()`; keep the `[0,25]@$0` band only as an API note, never in the cost path.
 
 Storage is charged once per table — not duplicated across the `dynamoDbOnDemand` / `amazonDynamoDbProvisionedThroughputCapacity` sub-services even when both are present in the body. Whichever sub-service the user is sizing carries the storage field; if both are present, the storage value should match across them in the capture (both `"10"` GB in the reference body).
 
@@ -315,14 +317,21 @@ read_units_total = reads_std_strong + reads_std_eventu + reads_std_txn
 wu_per_write = ceil(averageItemSizeForAllAttributes / 1)
 write_units_total *= wu_per_write
 
-# Pick rates by selectTableClass
-rate_write_per_unit = $6.25e-07  if standard else $1.5e-06  # IA rate ~2.4x in us-east-2
-rate_read_per_unit  = $1.25e-07  if standard else $1.55e-07
+# Pick rates by selectTableClass — look up the IA rates live; do not assume a fixed multiplier.
+# (The IA replicated-write SKU is ~1.25x standard, not the ~2.4x implied by an old note here;
+#  query group=DDB-WriteUnitsIA / DDB-ReadUnitsIA for the region rather than scaling.)
+rate_write_per_unit = $6.25e-07  if standard else <DDB-WriteUnitsIA rate for region>
+rate_read_per_unit  = $1.25e-07  if standard else $1.55e-07   # IA read $0.155/M us-east-2
 
 monthly_ondemand = (write_units_total * rate_write_per_unit)
                  + (read_units_total  * rate_read_per_unit)
                  + storage_monthly(dataStorageSize, selectTableClass)
+
+# storage_monthly = dataStorageSize * per_gb_rate  (NO 25 GB free-tier subtraction — the SPA bills flat)
+#   Standard: $0.25/GB-Mo;  Standard-IA: $0.10/GB-Mo (us-east-2)
 ```
+
+Reconciled against the capture: `dynamoDBOnDemand` = `$9.38` = 10M writes × 1 WRU × $6.25e-07 ($6.25) + 10M reads × 0.5 RU × $1.25e-07 ($0.625) + 10 GB × $0.25 ($2.50) = `$9.375`. The **flat** storage (no free tier) is what closes the cent — and it confirms the read/write split formula above.
 
 Replicated write request units (for Global Tables) use `DDB-ReplicatedWriteUnits` — same shape, replace the rate.
 
@@ -348,7 +357,9 @@ upfront_provisioned = wcu_reserved * $1.50                                # 1yr 
                     + rcu_reserved * $0.30                                # 1yr Heavy std upfront per RCU
 ```
 
-`baseline*/peak*/durationPeak*` together model autoscaling shape; the calculator's exact peak-blending math is `ceil(baseline + (peak - baseline) * (durationPeakHrs / 730))` for each of read and write. Verify against a capture before relying on this for non-trivial peak/baseline splits — the captured example uses 100/400 with 72 hrs/mo peak and yields `serviceCost.monthly = 28.64` for 100% reserved 1yr standard table class at 10 GB storage in us-east-2, which is consistent with reserved hourly × baseline + small storage charge.
+`baseline*/peak*/durationPeak*` together model autoscaling shape; the calculator's exact peak-blending math is *believed* to be `ceil(baseline + (peak - baseline) * (durationPeakHrs / 730))` for each of read and write.
+
+> **Do NOT quote a non-trivial provisioned peak/baseline split without a HAR.** This formula is not reconciled to the capture: at baseline 100 / peak 400 / 72 hrs the documented blend gives ~$30.75 while the captured recurring is `$28.64`, and the **upfront** ($180) cleanly matches a *baseline-100* sizing — i.e. upfront and recurring use **different** capacity bases. Reserved-only at baseline (no peak) is too low; the blend is too high. Until this is reverse-engineered, restrict provisioned DynamoDB estimates to baseline-only (peak = baseline) configs, or capture a HAR for the exact peak/baseline split and re-derive. Flag the uncertainty in the breakdown.
 
 ### DAX
 
@@ -459,7 +470,7 @@ Apply when the user is silent. Always emit only the sub-services the user actual
   - `dynamoDBDataImportS3`: captured `$1.50` → 10 × $0.15 = `$1.50`. Exact.
   - `dynamoDBOnDemandStreams`: captured `$0` → 10 requests is below the 2.5M free-tier band. Consistent.
   - `dynamoDBChangeDataCapture`: captured `$0` → 10 writes × 10 CDC units × $1e-07 ≈ $1e-05, rounds to `$0.00`. Consistent.
-  - `dynamoDBOnDemand`: captured `$9.38` — back-of-envelope (10M writes × 1 WRU × $6.25e-07 + 10M reads × 0.5 RU × $1.25e-07 + 10 GB storage − free tier) is in the right neighborhood but **the exact read-consistency / item-size rounding the SPA uses has not been reproduced field-for-field**; verify before relying on the closed-form formula above for production estimates.
+  - `dynamoDBOnDemand`: captured `$9.38` → **reconciled to the cent** as 10M writes × 1 WRU × $6.25e-07 ($6.25) + 10M reads × 0.5 RU × $1.25e-07 ($0.625) + 10 GB × $0.25 **flat** storage ($2.50) = `$9.375`. The key was using flat storage with **no** 25 GB free tier (see the Storage section). This also confirms the read/write split formula.
   - `dynamoDBProvisioned`: captured `$28.64 / $180 upfront` — the upfront cleanly matches 100% reserved at baseline 100 RCU + 100 WCU (100×$0.30 + 100×$1.50 = $180). The recurring `$28.64` is consistent with the reserved hourly rates plus a small storage charge, but the **exact peak/baseline blending used to size committed capacity has not been re-derived from the SPA's bundle** — verify before relying on this for non-trivial peak/baseline configurations.
 - **Inferred and not yet verified — verify before relying on this**:
   - The provisioned peak-blend formula (`ceil(baseline + (peak - baseline) * (durationPeakHrs / 730))`).

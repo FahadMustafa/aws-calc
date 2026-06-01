@@ -76,7 +76,7 @@ serviceCost.monthly = cmk_monthly
                     + rsa_pair_monthly
 ```
 
-Verified at us-east-2 with the captured inputs:
+Verified at us-east-2 with the captured inputs (the per-region rate literals below — $1.00/CMK-month, $0.03/10K, $0.15/10K, etc. — are **us-east-2 only**; rates differ by region, e.g. GovCloud and some opt-in regions, so look them up per region with `get-products` rather than reusing these example literals):
 ```
 cmk          = 5 * $1.00            = $5.00
 sym req      = 2,000,000/10000 * $0.03 = $6.00
@@ -89,6 +89,8 @@ rsa pair     = 1000/10000 * $12.00     = $1.20    # back-calculated; see below
 ```
 
 The RSA GenerateDataKeyPair rate of **$12.00 per 10,000 pairs** is back-calculated from this single capture (`$12.23 captured - $11.03 from the other five lines = $1.20 residual / 0.1 = $12.00/10K`). This is **higher** than the per-10K headline rates for sign/verify operations because RSA 2048 key-pair generation is computationally expensive; AWS prices it closer to per-pair than per-request. **Confirm via the Pricing API before quoting** — and capture a second saveAs with `numberOfRsaGenerateDataKeyPairRequests` set to zero to verify the residual really attributes to RSA pair generation (not to a free-tier subtraction or an unmodeled SKU).
+
+> **CAVEAT — single-sample inference.** The $12.00/10K RSA `GenerateDataKeyPair` rate is inferred from exactly ONE capture and is not a published, verified number. Before quoting **any** non-trivial RSA key-pair-generation volume, pull the live rate with `scripts/pricing_client.py get-products` for the user's region and use that value. **Never quote from the baked-in $12/10K number** — it exists only to make the worked example reconcile.
 
 ## configSummary template
 

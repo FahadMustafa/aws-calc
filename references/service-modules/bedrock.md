@@ -4,6 +4,8 @@
 
 This module covers **Anthropic** + **In-Region On-Demand Standard tier** only. Other inference routes (Cross-region, Provisioned Throughput, Batch) and other tiers/feature flags use distinct sets of cc keys with different suffixes.
 
+> **Hard precondition (silent-$0 hazard).** The model and cache rates are selected by opaque tokens (`modelSelectionIRstan`, `selectedModelIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`). If any token is wrong or unknown, the SPA cannot decode it and renders the line as **$0** on the recipient's "Update" — regardless of what `serviceCost.monthly` you stored. Therefore: **only emit a Bedrock line when every token is either (a) the captured Anthropic token set below, or (b) harvested from a fresh HAR for the exact model.** After computing, assert `serviceCost.monthly > 0` for any non-zero request volume (the skill's global invariant); if it's $0 with real usage, you used a bad token — refuse the line instead. The model-name → token mapping is not yet reverse-engineered, so in practice this module can only price the one captured model without a new HAR.
+
 ## Group-level header
 
 ```json
@@ -76,13 +78,24 @@ Four cc fields carry opaque 43-char URL-safe-base64 tokens that the SPA derefere
 | `cacheReadIRstan` | Cache-read pricing variant | `n9r1OkCw7sahKrcm5k_dLlzEu09FwTSCVv5QwmP_Hs4` | Cache-read rate enum |
 | `cacheWriteIRstan` | Cache-write pricing variant | `mJCg-f97ByF7pKaysTOJs737vV6RxBfUYYMwhpWBEvU` | Cache-write rate enum |
 
-These tokens are **not derivable from outside the SPA** — they are not present in greppable form in `bundle.js`, and inventing or guessing them will produce a broken estimate (zero serviceCost or load failure). To quote any model + cache combination beyond the captured set:
+These tokens are `RegionlessRateCode` values from the SPA's public catalogs at:
 
-1. Open calculator.aws and select the desired model, region, cache settings.
-2. Click "Save and share" → capture the resulting POST.
-3. Extract the four tokens from the captured cc and add them to the table above.
+- `https://calculator.aws/pricing/2.0/meteredUnitMaps/bedrock/USD/current/bedrock.json` (~2 MB)
+- `https://calculator.aws/pricing/2.0/meteredUnitMaps/bedrockfoundationmodels/USD/current/bedrockfoundationmodels.json` (~1.1 MB)
 
-The token-driven design means this module is **only safe to use for the captured combination** (whichever Claude variant is encoded in the captured `selectedModelIRstan`) until the token table is filled in for additional models.
+Unlike `amazon-mq.md`'s `mq.json` catalog (which has friendly keys like `"RabbitMQ Active Standby mq m5.large"` that resolve directly to tokens), **the Bedrock catalogs are keyed only by `RegionlessRateCode`** — no model-name metadata is embedded in `regions[*][<token>]`. The model-name → token mapping must come from one of:
+
+1. **bundle.js's amazonBedrock model registry** (location and structure not yet fully reverse-engineered)
+2. **`https://d1qsjq9pzbk1k6.cloudfront.net/data/amazonBedrock/en_US.json`** — a ~2 KB descriptor file that the SPA also fetches; investigation in progress.
+
+Until that mapping is documented (tracked as a follow-up beads issue), the safe path is:
+
+1. **For the one known Anthropic model token combo above**: emit using the captured tokens verbatim and quote with the standard formula.
+2. **For any other model / cache configuration**: capture a fresh HAR with the SPA configured for the target model and harvest its four tokens, or refuse the line item and ask the user.
+
+See `references/opaque-tokens.md` for the general resolution pattern and the `scripts/resolve_token.py` helper (which already handles the catalog fetch; the Bedrock-specific name→token chain is the missing piece).
+
+**Do not** substitute a different model's tokens while overriding `serviceCost.monthly` — the SPA recomputes from cc on load and renders a `$0` line when unknown tokens don't decode.
 
 ## Pricing API filters
 
@@ -108,11 +121,11 @@ requests_per_month   = avgRequestsPerMin * 60 * hoursPerDayAtThisRate * 30      
 input_tokens_month   = requests_per_month * avgInputTokensPerRequest
 output_tokens_month  = requests_per_month * avgOutputTokensPerRequest
 
-# Cache impact (only when withPromptCaching = "1")
+# Cache impact (only when withPromptCaching = "1") — UNVERIFIED, see warning below
 cache_hit_fraction   = cacheRate / 100
 cache_read_tokens    = input_tokens_month * cache_hit_fraction
-cache_write_tokens   = input_tokens_month * (1 - cache_hit_fraction)              # tokens that needed to be written into the cache
-billable_input_tok   = input_tokens_month * (1 - cache_hit_fraction)              # uncached portion still pays full input rate
+cache_write_tokens   = input_tokens_month * (1 - cache_hit_fraction)              # tokens written into the cache
+billable_input_tok   = input_tokens_month * (1 - cache_hit_fraction)              # uncached portion at full input rate
 
 input_cost           = billable_input_tok / 1000 * input_per_1k
 output_cost          = output_tokens_month / 1000 * output_per_1k
@@ -125,6 +138,10 @@ image_cost           = images_per_month * image_rate(L, W)                      
 
 serviceCost.monthly  = input_cost + output_cost + cache_read_cost + cache_write_cost + image_cost
 ```
+
+> **Two unverified assumptions in this formula — flag both, and prefer to disable caching until reconciled:**
+> 1. **30-day month.** Bedrock uses `× 30` (line above), unlike the 730-hour convention everywhere else in the skill. At the captured $1.02 volume this can't be confirmed; if the SPA actually uses 730/24 ≈ 30.42 days or another constant, request volume (and cost) is off by ~1.4%.
+> 2. **Prompt-cache split likely double-counts.** As written, the uncached fraction `input_tokens × (1 - hit)` is charged the **full input rate** (`billable_input_tok`) **and** the **cache-write rate** (`cache_write_tokens`) simultaneously. Real Anthropic caching charges cache *writes* (premium, ~1.25×) on the first miss of *cacheable* content and cache *reads* (discount, ~0.1×) on hits; plain non-cacheable input pays the input rate once. Charging the same token pool at both full-input and cache-write overstates cost. Until this is reconciled against a cache-enabled, non-trivial-volume capture, set `withPromptCachingIRstan: "0"` (and `cacheRateIRstan: "0"`) and quote without caching, or capture a HAR.
 
 Captured `serviceCost.monthly: $1.02` at eu-west-1 with the captured inputs is a near-minimum estimate (1 req/min × 8h × 1 token each, 50% cache, 1 small image). Exact rate confirmation needs a higher-volume capture — at $1.02/month the math is dominated by image fees and rounding, so it's not a useful arithmetic anchor for the per-1K-token rates. **Build a follow-up capture with avgRequestsPerMin=100, both image and cache disabled, to isolate the per-1K input/output rates for whichever model the captured tokens select.**
 

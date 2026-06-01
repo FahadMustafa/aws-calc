@@ -108,7 +108,7 @@ Same filters as above; the returned SKU includes Reserved terms keyed by `LeaseC
 ```
 db_compute_monthly = hourly * 730 * (utilization_pct / 100) * Number_of_Nodes
 db_storage_monthly = gp_per_gb_month * storageAmount             # per the storageVolume class
-db_backup_monthly  = max(0, retentionPeriod_days_to_gb_mo - free_tier) * backup_per_gb_month
+db_backup_monthly  = 0   # see warning below — NOT a defined days->GB-month conversion
 proxy_monthly      = proxy_per_hour * 730 * Number_of_Nodes      # if createRDSProxy=="1"
 insights_monthly   = insights_per_vcpu_hr * 730 * vcpu * Number_of_Nodes  # if DatabaseInsightsSelected=="1"
 extended_monthly   = ext_per_vcpu_hr * 730 * vcpu                # if addRDSExtendedSupport=="1"
@@ -116,6 +116,8 @@ extended_monthly   = ext_per_vcpu_hr * 730 * vcpu                # if addRDSExte
 serviceCost.monthly = sum
 serviceCost.upfront = sum of any RI All/Partial Upfront amounts
 ```
+
+> **Backup is not modeled.** Unlike the SQL Server module (which has an explicit `additionalBackupStorage` GB field), the Postgres form exposes only `retentionPeriod` (days). There is **no defined conversion from retention days to billable GB-months** — backup storage equal to 100% of provisioned DB storage is free, and the chargeable amount depends on DB size and change rate, which the form does not collect here. The SPA's own derivation is not captured. So: keep `retentionPeriod: "0"` (the default) and treat backup as `$0` unless you capture a retention>0 estimate to learn the SPA's formula. If a user needs backup-over-free-tier priced, flag that this module cannot derive it and offer to capture a HAR.
 
 ## configSummary template
 

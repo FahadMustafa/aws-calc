@@ -25,7 +25,7 @@ Serverless container compute for ECS tasks (and EKS pods). One line item per tas
   "numberOfTasks":                  {"value": "1", "unit": "perDay"}, // unit: perDay | perMonth | perHour (others inferred from SPA conventions)
   "taskDuration":                   {"value": "1", "unit": "min"},    // min | hour | sec  (only "min" round-tripped)
   "vcpuPerTask":                    {"value": "1"},                   // Fargate-supported vCPU sizes: 0.25, 0.5, 1, 2, 4, 8, 16
-  "memoryStandardFargateOnDemand":  {"value": "8",  "unit": "gb|NA"}, // GB; field name encodes "Standard Fargate" + "OnDemand" mode
+  "memoryStandardFargateOnDemand":  {"value": "8",  "unit": "gb|NA"}, // GB (8 in the capture); MUST be a valid combo for vcpuPerTask — see Defaults
   "storageAmountECS":               {"value": "20", "unit": "gb|NA"}  // ephemeral GB allocated per task; first 20 GB free
 }
 ```
@@ -139,7 +139,7 @@ Use the lowercase `linux`/`x86` values from `calculationComponents` capitalized 
 | numberOfTasks | "1" perDay | Most common quick-quote shape |
 | taskDuration | "1" min | Minimal job; flag for batch/long-running workloads |
 | vcpuPerTask | "1" | Smallest "standard" Fargate config — 0.25/0.5 are valid for small tasks |
-| memoryStandardFargateOnDemand | "2" gb | Default for vCPU=1; bump to 8 for memory-heavy services |
+| memoryStandardFargateOnDemand | smallest valid memory for the chosen vCPU (2 GB for vCPU=1) | Must be a valid Fargate vCPU/memory combo or ECS rejects the task. The captured example uses 8 GB at vCPU=1; pick the minimum valid value when the user is silent and **flag it** (memory is a real cost axis — under-defaulting under-quotes, over-defaulting over-quotes). Do not leave this contradicting the shape example. |
 | storageAmountECS | "20" gb | Free tier; bump only if the user mentions large temp/working files |
 
 Fargate-supported vCPU/memory combinations are constrained (e.g. 0.25 vCPU → 0.5/1/2 GB memory only; 1 vCPU → 2–8 GB; 4 vCPU → 8–30 GB). The SPA may accept invalid combos and still render a cost — but the real ECS API will reject the task definition. If the user describes a memory-heavy small-vCPU profile, nudge them toward a valid combo.

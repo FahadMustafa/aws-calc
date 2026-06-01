@@ -118,6 +118,8 @@ All filters: `--service-code AmazonCloudWatch --filter regionCode=<region>`. The
 ```
 Returns no SKUs through the Pricing API in tested regions. The flat published rate is **$3.00 per dashboard per month** after the 3-dashboard free tier. **verify before relying on this** — the price is from AWS public pricing pages, not Price-List API.
 
+> **Re-verify on version bump.** The $3.00/dashboard-month rate comes from the AWS marketing/pricing page and has **no Price-List API guardrail** (no SKU is returned for `productFamily=Dashboard`), so there is no automated cross-check. It may be region-dependent. Carry a date stamp on this figure and re-check it against the AWS dashboards pricing page whenever the form `version` changes.
+
 ### Logs — ingestion
 
 | Field | Filter | Rate (us-east-2) |
@@ -269,6 +271,8 @@ serviceCost.upfront = 0
 ```
 
 The captured body's `serviceCost.monthly = 222.05` came from every dimension set to "10" (units vary), `logStorageOption="1"`, Parquet off. Reproducing that to the cent requires the SPA's internal mobile-RUM byte-size assumption and exact Database-Insights engine selection — not reproduced end-to-end here. Reproduce within ~5% by summing the explicit formulae above; for tighter agreement, snapshot the SPA bundle.
+
+> **Caveat — SPA-internal dimensions.** The mobile-RUM byte-per-event factor (events → OTEL payload GB) and the Lambda-Insights cost path (functions/invokes → derived Logs + metrics volume) are **SPA-internal**, not Price-List-derived — they live in the calculator's bundled JS and are not exposed by the Pricing API. Any estimate that leans on these two dimensions **cannot be reconciled to the cent** against a capture; flag this to the user when mobile RUM or Lambda Insights is material to the quote.
 
 ## configSummary template
 

@@ -57,22 +57,24 @@ VPC is a **group** service: the line item has `subServices: [...]` for each pric
 }
 ```
 
-### NAT Gateway (`networkAddressTranslationNatGatewayVpc`) — fields inferred, verify before use
+### NAT Gateway (`networkAddressTranslationNatGatewayVpc`) — NOT yet supported, refuse until HAR-captured
+
+The live form (`version 0.0.19`) is more complex than the two verified sub-services. Its real input set is **not** the simple `{numberOfNATGateways, dataProcessedPerNATGateway}` shape previously guessed here — inspecting the current service definition shows the primary count field is actually `numberOfGateways` (not `numberOfNATGateways`), plus a separate **regional** NAT Gateway block (`regionalNatGatewayCount`, `regionalNatGatewayAzCount`, `regionalNatGatewayDataProcessed`, …) and several `networkAddressTranslationNatGateway_generated_*` fields whose semantics are not captured.
 
 ```jsonc
 {
   "serviceCode":  "networkAddressTranslationNatGatewayVpc",
   "estimateFor":  "natGateway",
-  "version":      "<TBD>",
+  "version":      "0.0.19",            // confirmed live; cc shape below is INCOMPLETE
   "region":       "<code>",
   "calculationComponents": {
-    "numberOfNATGateways":               {"value": "1"},
-    "dataProcessedPerNATGateway":        {"value": "100", "unit": "gb|month"}
+    "numberOfGateways":            {"value": "1"},                       // confirmed field name (was wrongly "numberOfNATGateways")
+    "dataProcessedPerNATGateway":  {"value": "100", "unit": "gb|month"}  // confirmed; but other required fields are missing
   }
 }
 ```
 
-(Capture a HAR before promising NAT Gateway or other unverified VPC sub-services. Field names follow the pattern of the verified two but should be confirmed.)
+**Do not emit a NAT Gateway line from this partial shape.** It is missing the `regionalNatGateway*` and `_generated_*` fields the form requires, so a saved estimate will error on the recipient's "Update" (the SPA reports the service as incompatible with its inputs). Refuse the NAT Gateway line and offer to capture a HAR to complete the module. Pricing API filters are correct (below) for when the shape is captured. Same rule for any other unverified VPC sub-service.
 
 ### Data Transfer (`dataTransferVpc`)
 
@@ -124,7 +126,7 @@ This is **per-endpoint** × **per-AZ** billing. `numberOfAvailabilityZonesEndpoi
 {
   "serviceCode":  "publicIpv4Address",
   "estimateFor":  "ipv4publicaddress",
-  "version":      "<TBD>",
+  "version":      "0.0.17",
   "region":       "<code>",
   "description":  null,
   "calculationComponents": {
@@ -187,6 +189,8 @@ Inter-region and internet egress live in the EC2 service code, not AmazonVPC:
 
 Filter further by `transferType` to get the right SKU: `AWS Outbound` (internet egress, tiered by GB/month), `InterRegion Outbound` (between regions; `toRegionCode` selects destination), `IntraRegion` (cross-AZ within the same region).
 
+**Intra-region (cross-AZ) is billed in both directions.** The `IntraRegion` SKU rate (~$0.01/GB) is charged once for egress *and* once for ingress across AZs, so the effective rate is **2×** the per-GB SKU rate. Verified against the capture: `dataTransferVpc` = $1126.40 = $921.60 outbound + **$204.80 intra-region**, and $204.80 / 10 240 GB = **$0.02/GB** = $0.01 × 2. Multiply intra-region GB by `2 × intra_region_per_gb`.
+
 ### PrivateLink / Interface VPC Endpoints
 
 ```
@@ -227,7 +231,7 @@ data_xfer monthly      = sum over entries of:
     elif entryType == "OUTBOUND":
         inter_region_outbound(value, toRegion) * value_in_GB
     elif entryType == "INTRA_REGION":
-        intra_region_per_gb * value_in_GB
+        intra_region_per_gb * value_in_GB * 2   # cross-AZ is billed in BOTH directions ($0.01/GB each way) -> $0.02/GB effective
     # INBOUND is free
 
 PrivateLink hourly     = privatelink_per_hour * 730

@@ -194,6 +194,8 @@ nodes_monthly          = sum over rows of node_monthly_per_row
 nodes_upfront          = sum over rows of node_upfront_per_row
 ```
 
+> **Serverless math is best-effort and not reconciled — handle with care.** In the captured estimate the Serverless drivers (`processingUnitCount_v2`, `AvgCacheDataSize_v2`, `AvgDataTransfer_v2`) account for ~$18,339/mo — about **21% of the $87,106.81 total** — and that residual does **not** decompose cleanly into the published ECPU / data-storage / cross-AZ rates (the two node clusters alone are ~$68,767/mo). So any estimate that populates the Serverless scalars rests on an unverified path. **Keep all Serverless scalar fields at `"0"` unless the user explicitly asks for ElastiCache Serverless.** When they do: compute with the formula below, but mark the line best-effort, recompute-validate the share URL, and prefer to capture a Serverless-only HAR before quoting a large Serverless workload.
+
 For Serverless (`columnFormIPM_dsp` + the scalar fields):
 
 ```
@@ -206,7 +208,7 @@ data_storage_monthly   = storage_gb * data_storage_gb_hr * H
 
 serverless_dt_monthly  = ecpu_per_sec * H * 3600 \                    # requests/month
                          * float(AvgDataTransfer_v2.value) / 1024 / 1024 \  # GB per request
-                         * cross_az_per_gb                              # see "Verify" note above
+                         * cross_az_per_gb * 2                          # cross-AZ billed in+out (see "Verify" note); UNVERIFIED
 ```
 
 Snapshot cost (rough):

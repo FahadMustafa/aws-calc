@@ -155,8 +155,11 @@ Returns three SKUs keyed by `usagetype`:
 | `numberOfGETAPIRequests`       | `directAPI.snapshot.Get`  | per 1000 SnapshotAPIUnits |
 | `numberOfDirectAPIListRequests`| `directAPI.snapshot.List` | per 1000 Requests |
 
-The API returns `price_per_unit` as the per-request rate (the SPA divides the
-1000-request rate by 1000). Multiply directly by the user's request count.
+**Mind the unit.** These SKUs are priced **per 1000** requests/SnapshotAPIUnits
+(see the `unit` column and the SKU's `unit` field). Compute
+`(request_count / 1000) * price_per_unit` — do **not** multiply the raw count by
+`price_per_unit`, or you over-charge by 1000×. (Impact is usually tiny because
+request volumes are small, but get it right.)
 
 ### Fast Snapshot Restore (optional, surfaced via `numberOfSnapshotsToRestore` / DSU-hours)
 
@@ -205,21 +208,20 @@ monthly_api       = put_rate  * numberOfDirectAPIPUTRequests
                   + get_rate  * numberOfGETAPIRequests
                   + list_rate * numberOfDirectAPIListRequests
 
-monthly_fsr       = 0   # see "verify before relying on this" note above
+monthly_fsr       = 0   # NOT MODELED — see the hard warning below
 
 serviceCost.monthly = monthly_storage + monthly_snapshot + monthly_api + monthly_fsr
 serviceCost.upfront = 0   # EBS is on-demand only
 ```
 
+> **Do NOT ship a standalone EBS estimate when `numberOfSnapshotsToRestore > 0` (or FSR is involved) without modeling restore.** `monthly_fsr = 0` means this formula returns near-zero for restore-heavy workloads while the real cost is orders of magnitude higher. The capture proves it: 30 GB / 3 GB delta / 2× Daily / 10 restores has `serviceCost.monthly = $5,484.14`, but storage + incremental snapshot + direct-API alone is only ~$5. Restore/FSR is the entire bill. Until the DSU-hour/restore derivation is reverse-engineered, either (a) source the restore charge from a HAR and add it, or (b) **refuse the standalone EBS line** and tell the user it can't be priced accurately with restores — do not hand off the ~$5 number as if it were the cost. This also trips the `serviceCost > 0` sanity check only weakly (the line is non-zero but wildly low), so it must be caught here, not by that backstop.
+
 Notes:
 
 - The SPA's actual snapshot math is more nuanced than `snap_per_gb_mo *
-  snapshotAmount * snapshotFrequency`. The capture shows `serviceCost.monthly:
-  5484.14` for 30 GB / 3 GB delta / 2x Daily snapshots / 10 restores — which
-  is dominated by FSR / restore charges this formula does not model. Use the
-  formula above for the calculator-canonical line items (storage + incremental
-  snapshot + EBS direct APIs); when restores or FSR matter, note the gap in
-  the breakdown so the user can correct.
+  snapshotAmount * snapshotFrequency`. The storage + incremental snapshot +
+  EBS direct-API portion of the formula is calculator-canonical; the FSR/restore
+  portion is the gap (above).
 - `durationOfInstanceRuns` defaults to 730 (full month). Lower values
   prorate. Stored as string.
 - All numeric values in `calculationComponents` are stored as **strings**, not

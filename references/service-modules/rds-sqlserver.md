@@ -18,6 +18,25 @@ Sibling of `rds-postgres.md`. Same column-form list pattern, but the row carries
 
 `estimateFor` is literally `"rdsForOracle"` — the SPA reuses the Oracle form template for SQL Server. Preserve verbatim; do not "fix" it. `serviceName` is captured exactly as `Amazon RDS for SQL server` (lowercase "server").
 
+## Recompute fragility & combo validation (read before emitting)
+
+This is the most recompute-fragile service in the skill. Oracle **and** SQL Server share the one `rdsForOracle` form, so a single brittle code path breaks both. Two structural traps make the recipient's "Update" fail with *"This service in your estimate isn't compatible with your original inputs"*:
+
+1. **No-id utilization column.** The live form's utilization column has no `id`/`selectorId` (only `type: "utilization"`, `exportValueAs: "utilizationOut"`), so it serializes to the literal key `"undefined"` with the value under `unit` and the unit under `selectedId` (see the row shape below). This is correct and must be copied verbatim — but it means the column round-trips only if every *other* field in the row resolves cleanly.
+2. **Deep dependent dropdown chains.** `Database Edition` depends on `Deployment Option` + `TermType` + `License Model`; `Unbundled Licensing` depends on all four. If the stored combination is not a currently-valid dependent path, the SPA cannot resolve the dropdown on Update and throws.
+
+**Validate the combination before building the line item. Refuse (or fall back) on:**
+
+- **BYOL + Web** — illegal; Web edition is License-included only.
+- **BYOL + Express** — AWS often returns no SKU. Fall back to Standard pricing or refuse, per the filters section.
+- **License-included + Enterprise Developer** — Enterprise Developer is BYOL-only (dev/test); LI is invalid.
+- **Any Reserved `TermType` where the Pricing API returns no RI SKU** for that exact `instanceType` × `databaseEdition` × `deploymentOption` × `region`. Do the `get-products` RI lookup first; if it's empty, do not emit a Reserved line — drop to OnDemand or refuse.
+- **An `instanceType` not offered for that engine/edition/region** — confirm the OnDemand SKU exists before emitting.
+
+Prefer `TermType: OnDemand` and a common edition (Standard / Enterprise) unless the brief forces otherwise. After saving, recompute-validate per `SKILL.md` step 7 (drive the SPA's "Update" headlessly) — the load-endpoint check will not catch these.
+
+**Oracle RDS is not supported** — it shares this form but has different editions/license models that are not captured. Refuse Oracle line items; do not route them through this module.
+
 ## calculationComponents (verified shape)
 
 ```jsonc
