@@ -7,6 +7,8 @@ This service is modeled as a **group** in the calculator (`estimateFor: "awsDRSG
 - `awsDrsRecoveryReplication` (`estimateFor: "template1"`) — the only one with paid components. DRS replication hours + EBS staging + EBS snapshots all roll up here.
 - `awsDrsDrill` (`estimateFor: "template2"`) — drill / recovery launches. The SPA emits this with `!HIDDEN` placeholder values and `monthly: 0`; reproduce the same placeholder shape so the SPA doesn't reject the body.
 
+> **`subServices` MUST be a JSON array, not an object.** (Recompute fix 2026-06, live-SPA verified.) Like every other group-shaped service in this skill (S3, VPC, ELB, AWS Backup), the `subServices` value is a **list** of the two subService objects, in order `[template1, template2]` — NOT a dict keyed by sub-service name. Encoding it as an object (e.g. `{"awsDrsRecoveryReplication": {...}, "awsDrsDrill": {...}}`) is accepted by the save endpoint but makes the SPA fail to parse the **entire** estimate on load ("Unable to parse the data using legacy methods") — every line item disappears and the total renders `$0`, not just the DRS line. See the container shape below.
+
 The EC2 replication servers (default t3.small instances, `disks / 15` rounded up) are **not** charged through this line item. The SPA tells the user to add an EC2 estimate separately, and the captured saveAs body does not include any replication-server cost — see Verification.
 
 ## Line-item header (group wrapper)
@@ -26,6 +28,25 @@ The EC2 replication servers (default t3.small instances, `disks / 15` rounded up
 The group's `serviceCost.monthly` equals the sum of its two subService `serviceCost.monthly` values. In practice only `template1` is non-zero.
 
 ## subServices (verified shape)
+
+The full line-item value object wraps the two subServices in a **`subServices` array** and carries its own summed `serviceCost`:
+
+```jsonc
+{
+  "serviceCode": "awsElasticDisasterRecovery",
+  "estimateFor": "awsDRSGroups",
+  "version": "0.0.17",
+  "region": "<code>", "regionName": "<display>",
+  "serviceName": "AWS Elastic Disaster Recovery",
+  "description": null,
+  "subServices": [            // <-- ARRAY, ordered [template1, template2]. NOT an object/dict.
+    { /* awsDrsRecoveryReplication (template1) — see below */ },
+    { /* awsDrsDrill (template2) — see below */ }
+  ],
+  "serviceCost": { "monthly": <sum of subServices>, "upfront": 0 },
+  "configSummary": "..."
+}
+```
 
 ### `awsDrsRecoveryReplication` (template1) — required, carries all cost
 

@@ -18,6 +18,20 @@ Notable form quirks vs. the EC2 module's EBS section:
   gp3-only throughput / IOPS surcharges as discrete fields; gp3 throughput and
   IOPS surcharges fall back to defaults.
 
+> **Two distinct line shapes — pick the right one.** This form is used for two
+> very different intents, and the recompute-safe `calculationComponents` shape
+> is **not** the same for both:
+>
+> - **gp3 (or other) volume line** — provisioned block storage. Uses a gp3
+>   `storageType` and a real `storageAmount`, with snapshot fields zeroed. See
+>   the gp3 volume documentation below; this shape recomputes correctly.
+> - **EBS snapshot-storage line** — incremental snapshot storage cost only.
+>   Uses the **gp2** `storageType` string, a *minimal* `storageAmount`, and the
+>   `snapshotFrequency` / `snapshotAmount` pair. See **"EBS Snapshots
+>   (recompute-safe shape)"** below. A snapshot line built with a gp3
+>   `storageType` recomputes to **$0.00** on "Update estimate" — see the
+>   recompute-fix note.
+
 ## Line-item header
 
 ```json
@@ -105,6 +119,120 @@ contains no matching display strings. If the user asks for io2 explicitly,
 prefer the `ec2Enhancement` line item or surface this gap. Mark this:
 **verify before relying on this** for io2 / io2 Block Express requests.
 
+## EBS Snapshots (recompute-safe shape)
+
+> **Recompute fix (2026-06, live-SPA verified).** Earlier versions of this
+> module represented snapshot-storage lines with a gp3 `storageType`
+> (`"Storage General Purpose gp3 GB Mo"`), the EBS direct-API request fields
+> (`numberOfDirectAPIListRequests`, `numberOfGETAPIRequests`,
+> `numberOfDirectAPIPUTRequests`), `numberOfSnapshotsToRestore`, and
+> `storageAmount: "0"`. **That shape recomputes to `$0.00`** when the user hits
+> "Update estimate" in the SPA: the gp3 storageType has **no snapshot-pricing
+> path**, and with `storageAmount` 0 there is nothing for the gp3 volume path
+> to charge either. The corrected shape below was captured from the **live AWS
+> Pricing Calculator SPA** and is verified recompute-safe.
+
+EBS *snapshot storage* is **not** modeled by setting a gp3 volume to size 0 and
+filling in snapshot deltas. The SPA computes snapshot cost through the **gp2**
+storage path plus the `snapshotFrequency` / `snapshotAmount` pair. The
+recompute-safe shape is:
+
+```jsonc
+{
+  // One "volume" — the snapshot line still rides on a volume row.
+  "numberOfInstances": { "value": "1" },
+
+  // Always-on full month.
+  "durationOfInstanceRuns": { "unit": "hours", "value": "730" },
+
+  // MUST be the gp2 string. The gp3 string has no snapshot-pricing path and
+  // recomputes the whole line to $0.00.
+  "storageType": { "value": "Storage General Purpose GB Mo" },
+
+  // Minimal volume — the SPA requires a volume but the snapshot cost does not
+  // come from it. Use the 1 GB minimum. (Its gp2 GB-mo cost is negligible and
+  // is part of the captured serviceCost; see worked example.)
+  "storageAmount": { "unit": "gb|NA", "value": "1" },
+
+  // "1" == Monthly. This is what triggers the snapshot-storage term. See the
+  // 50%-discount quirk below — frequency "1" applies a hardcoded partial-month
+  // discount to the snapshot term.
+  "snapshotFrequency": { "value": "1" },
+
+  // The changed-GB-per-snapshot input. To hit a target of G GB of snapshot
+  // storage at the regional snapshot rate, set this to ~2×G (see back-solve).
+  "snapshotAmount": { "unit": "gb|NA", "value": "<~2×target-GB>" }
+}
+```
+
+Note what is **absent** vs. the volume/blended shape: there are **no**
+`numberOfDirectAPIListRequests`, `numberOfGETAPIRequests`,
+`numberOfDirectAPIPUTRequests`, or `numberOfSnapshotsToRestore` keys. Do not
+add them to a snapshot line — they are the stale fields from the broken shape.
+
+### The 50% partial-storage-month discount (quirk)
+
+With `snapshotFrequency: "1"` (Monthly) the SPA applies a **hardcoded 50%
+partial-storage-month discount** to the incremental snapshot term. The snapshot
+term is therefore:
+
+```
+monthly_snapshot = snap_per_gb_mo * snapshotAmount * 0.5
+```
+
+There is **no frequency value that yields the full, undiscounted
+`GB × rate`** for the snapshot term — the discount is baked into the Monthly
+path used by the recompute-safe shape. This is why the captured `snapshotAmount`
+values are roughly **double** the GB of snapshot storage actually being
+represented.
+
+### Back-solving `snapshotAmount` to hit a target snapshot-storage cost
+
+Given a target of `G` GB of snapshot storage at regional snapshot rate
+`snap_per_gb_mo` (the `:SnapshotUsage` SKU, typically $0.05/GB-mo in
+eu-west-1, ~$0.054/GB-mo in eu-central-1):
+
+```
+target_cost   = G * snap_per_gb_mo          # what G GB "should" cost
+snapshotAmount = target_cost / (snap_per_gb_mo * 0.5)
+              = 2 * G                        # because the 0.5 discount halves the term
+```
+
+So **`snapshotAmount ≈ 2 × G`**. Equivalently, to land a specific dollar target
+directly: `snapshotAmount = target_cost / (snap_per_gb_mo * 0.5)`.
+
+The captured `serviceCost.monthly` also includes the negligible 1 GB gp2
+volume term, so verify the total against `snap_per_gb_mo * snapshotAmount * 0.5
++ gp2_per_gb_mo * 1`.
+
+### Worked example (from captures idx51 / idx88)
+
+**idx51 — eu-west-1, snapshot rate $0.05/GB-mo**, representing **9,044 GB** of
+snapshot storage:
+
+```
+snapshotAmount = 2 × 9044 = 18083 (capture used 18083.0)
+monthly_snapshot = 0.05 × 18083 × 0.5 = $452.075
+captured serviceCost.monthly = $452.24   # ≈ above + ~1 GB gp2 volume term
+```
+
+**idx88 — eu-central-1, snapshot rate ~$0.054/GB-mo**, representing
+**12,239 GB-equivalent** of snapshot storage (DRS staging snapshots, 3-day
+retention):
+
+```
+snapshotAmount = 24471.73   # ≈ 2 × 12239 (capture used 24471.73)
+monthly_snapshot = 0.054 × 24471.73 × 0.5 ≈ $660.7
+captured serviceCost.monthly = $660.91
+```
+
+Both captures use `storageType: "Storage General Purpose GB Mo"` (gp2),
+`storageAmount: "1"`, `snapshotFrequency: "1"`, and carry **none** of the
+direct-API / restore fields. The gp3 *volume* capture (idx87) keeps its gp3
+`storageType` with a real `storageAmount` (10 TB) and snapshot fields zeroed —
+that line always recomputed fine and is documented separately below; do not
+conflate the two.
+
 ## Pricing API filters
 
 Run every call through `scripts/pricing_client.py --profile <profile>
@@ -132,7 +260,9 @@ Returns one SKU with a single OnDemand `GB-Mo` priceDimension. Multiply by
 
 Returns multiple SKUs differentiated by `usagetype`. The standard incremental
 snapshot rate is the SKU whose `usagetype` ends in `:SnapshotUsage`
-(e.g. `USE2-EBS:SnapshotUsage` for us-east-2). The archive-tier rate is the
+(e.g. `USE2-EBS:SnapshotUsage` for us-east-2). This is the
+`snap_per_gb_mo` used by the recompute-safe snapshot shape and back-solve
+above (~$0.05/GB-mo eu-west-1, ~$0.054/GB-mo eu-central-1). The archive-tier rate is the
 SKU whose `usagetype` ends in `:SnapshotArchiveStorage`; snapshot-archive
 retrieval is `:SnapshotArchiveRetrieval` (priced per GB retrieved, not per
 GB-month). The standalone form does not surface archive-tier separately, so
@@ -202,7 +332,10 @@ monthly_storage   = storage_per_gb_mo
 
 monthly_snapshot  = snap_per_gb_mo
                     * snapshotAmount
-                    * snapshotFrequency                # incremental, per-snapshot delta
+                    * 0.5                              # snapshotFrequency "1" (Monthly):
+                                                       # SPA applies a hardcoded 50% partial-
+                                                       # storage-month discount. See
+                                                       # "EBS Snapshots (recompute-safe shape)".
 
 monthly_api       = put_rate  * numberOfDirectAPIPUTRequests
                   + get_rate  * numberOfGETAPIRequests
@@ -263,6 +396,14 @@ snapshotFrequency), list it in the breakdown so the user can correct.
 
 - **Ground truth**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonElasticBlockStore.json`
   — captured saveAs POST body from the calculator.aws SPA.
+- **Snapshot-shape ground truth (live-SPA, recompute-safe)**:
+  - `/tmp/rbm_frags/51.json` — eu-west-1 EBS snapshot storage,
+    `snapshotAmount` 18083, `serviceCost.monthly` $452.24.
+  - `/tmp/rbm_frags/88.json` — eu-central-1 DRS staging snapshots,
+    `snapshotAmount` 24471.73, `serviceCost.monthly` $660.91.
+  - `/tmp/rbm_frags/87.json` — eu-central-1 gp3 *volume* line (10 TB,
+    $2718.72); always recomputed fine. Confirms only the *snapshot*
+    representation was broken, not the gp3 volume one.
 - **Verified end-to-end**:
   - Top-level shape (`serviceCode`, `estimateFor`, `version`, `serviceName`,
     `regionName`) — copied verbatim from the capture.
@@ -282,9 +423,20 @@ snapshotFrequency), list it in the breakdown so the user can correct.
     have no matching display strings in the bundle for the standalone form —
     they appear to be unsupported here. If the user needs them, route to
     `ec2Enhancement` or capture a fresh HAR to validate.
-  - **Snapshot archive tier** — present in Pricing API but no dedicated
-    field in the captured `calculationComponents`. Out of scope for this
-    line item until a capture shows otherwise.
+  - **Snapshot storage** — IS modeled by this line item, but **not** via a
+    gp3 volume. Use the recompute-safe shape in
+    "EBS Snapshots (recompute-safe shape)" above: gp2 `storageType`, 1 GB
+    `storageAmount`, `snapshotFrequency: "1"`, and `snapshotAmount ≈ 2×target-GB`
+    (the SPA applies a hardcoded 50% partial-month discount). Verified against
+    live-SPA captures idx51 (eu-west-1, $452.24) and idx88 (eu-central-1,
+    $660.91). The previously documented shape (gp3 `storageType` +
+    direct-API/restore fields + `storageAmount: 0`) recomputed to **$0.00** and
+    is wrong — see the 2026-06 recompute-fix note.
+  - **Snapshot archive tier** — present in Pricing API
+    (`:SnapshotArchiveStorage`) but no dedicated field in the captured
+    `calculationComponents`. The standalone form models warm/incremental
+    snapshot storage only (via the shape above), not the archive tier. Out of
+    scope for this line item until a capture shows otherwise.
   - **Fast Snapshot Restore** — `numberOfSnapshotsToRestore` is captured but
     the SPA's derivation from that count to a DSU-hour charge is not visible
     in the bundle scrape. The formula above sets `monthly_fsr = 0`; the

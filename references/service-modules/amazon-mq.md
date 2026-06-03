@@ -9,13 +9,13 @@
 | RabbitMQ Cluster (Multi-AZ) | `rabbitMQBroker` | **Verified** end-to-end from HAR | `captures/saveAs/per-service/amazonMQ.json` |
 | ActiveMQ Single Instance | `singleInstanceBroker` | **Inferred** from `captures/bundle.js` form + catalog token table — quoteable | bundle.js + mq.json catalog |
 | ActiveMQ Active/Standby | `activeInstanceBroker` | **Inferred** from `captures/bundle.js` form + catalog token table — quoteable | bundle.js + mq.json catalog |
-| RabbitMQ Single Instance | `rabbitMQBroker` (likely; not yet HAR-verified) | **Inferred** from mq.json catalog (RabbitMQ Single Instance tokens present for m5.large/xlarge/2xlarge/4xlarge + t3.micro) — flag in breakdown | mq.json catalog |
+| RabbitMQ Single Instance | `rabbitMQBroker` (`rabbitBrokerType: "1"`) | **Verified** end-to-end from live-SPA HAR | sessionStorage capture (2026-06) + mq.json catalog |
 
 When the user's brief is ambiguous (e.g. "Amazon MQ broker, m5.large"), ask which engine (ActiveMQ vs RabbitMQ) and which deployment mode (single / active-standby / cluster) — engine + mode determines which template, which token series, and which rate row in the catalog.
 
 ## Opaque token resolution
 
-Three cc fields across MQ paths carry 43-char URL-safe-base64 tokens (`rabbitmqInstanceTypeClustered` for RabbitMQ Cluster; potentially the analogous fields for RabbitMQ Single Instance once its form is HAR-captured). These tokens are NOT secret — they are simply `RegionlessRateCode` values from `mq.json`. The friendly key in that catalog encodes engine + mode + instance type as a single string.
+Several cc fields across MQ paths carry 43-char URL-safe-base64 tokens (`rabbitmqInstanceTypeClustered` for RabbitMQ Cluster; `rabbitmqInstanceType` + `rabbitmqBrokerStorageType` for RabbitMQ Single Instance — see Path 4). These tokens are NOT secret — they are simply `RegionlessRateCode` values from `mq.json`. The friendly key in that catalog encodes engine + mode + instance type as a single string.
 
 ```
 # Resolve a token from the catalog (Python):
@@ -69,6 +69,7 @@ The full friendly→token table (region-independent), as of the catalog snapshot
 | `RabbitMQ Single Instance mq m5.4xlarge` | `PgcLCJ51By9-b00S4-7-PUgivVkUSw_zfnP89DKFuDQ` |
 | `Broker Storage GB Mo` (storage SKU, EFS) | `Watrf2j3RTOHvqFvNyHO2__jk9suw5nwtH-siXP1ch0` |
 | `Broker Storage Single AZ GB-Mo` (storage SKU, EBS) | `4yECRDLprMhFz4DNKwkPnhiB7MJsdz2F353VdKBw0HI` |
+| RabbitMQ Single Instance EBS storage type (`rabbitmqBrokerStorageType`, "Throughput optimized (EBS)") | `esp4MPQi7KC4ZP_fJVh0_C5OFda2B5SOjR_Yc8g-bxM` |
 
 The catalog also has ActiveMQ Cross-Region Data Replication ("CRDR") variants and a free-tier storage row — re-run the resolver with `--dump-friendly` to pick those up. The Pricing API only sees one rate per row regardless; for any new token, the catalog is the canonical source.
 
@@ -238,32 +239,72 @@ Identical to Single Instance: `broker_cost = numberOfBrokers * 730 * mqBrokerPri
 
 ---
 
-## Path 4: RabbitMQ Single Instance (Inferred)
+## Path 4: RabbitMQ Single Instance — `rabbitMQBroker` (Verified)
 
-⚠ Bundle.js v1 has no RabbitMQ form definitions, but mq.json contains the RabbitMQ Single Instance token series (5 instance types: m5.large/xlarge/2xlarge/4xlarge + t3.micro). The cc shape is **not yet HAR-verified** — the most likely shape mirrors RabbitMQ Cluster with one swap: `rabbitmqNumberOfClusteredBrokers` becomes `"1"` (or the field name changes; capture HAR to confirm). Until then, prefer Path 2 (ActiveMQ Single Instance) as a fully-quoteable alternative if the user's engine choice is flexible, or emit this best-effort and flag in the breakdown:
+✅ HAR-verified from the live SPA (`sessionStorage` key `awspc-root-estimate-v1`, captured 2026-06). The single-instance form reuses `estimateFor: "rabbitMQBroker"` / `version: "0.0.59"` (same as Cluster) but its cc uses a **different field set** than the Cluster path — do not copy the Cluster fields. Key differences: `rabbitBrokerType` is `"1"` for single-instance (Cluster is `"0"`), the instance/storage field names drop the `Clustered` suffix, there is **no broker-count field** (single instance is implicitly 1), and there is a distinct `rabbitmqBrokerStorageType` token field.
 
-```jsonc
-// SPECULATIVE shape — verify against HAR before relying on it
+Line-item header:
+
+```json
 {
   "serviceCode":  "amazonMQ",
   "estimateFor":  "rabbitMQBroker",
-  "version":      "0.0.59",                                       // copying from Cluster capture; may differ
+  "version":      "0.0.59",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon MQ",
   "description":  null,
-  "calculationComponents": {
-    "rabbitBrokerType":                {"value": "<TBD — likely a different small-int selector>"},
-    "rabbitmqInstanceTypeClustered":   {"value": "<RegionlessRateCode for RabbitMQ Single Instance mq <type>>"},
-    "rabbitmqNumberOfClusteredBrokers":{"value": "1"},
-    "rabbitmqstoragePerNodeClustered": {"value": "<GB>", "unit": "gb|NA"},
-    "dataTransfer": { "value": [ ...3-entry array... ] }
-  },
-  "serviceCost": { "monthly": <computed> }
+  "serviceCost":  { "monthly": <computed> }
 }
 ```
 
-When you do capture a HAR for this path, update this section and promote it to **Verified**.
+### calculationComponents (RabbitMQ Single Instance)
+
+```jsonc
+{
+  "rabbitBrokerType":          {"value": "1"},                                     // "1" = single-instance (Cluster = "0")
+  "rabbitmqInstanceType":      {"value": "<RegionlessRateCode for RabbitMQ Single Instance mq <type>>"},
+  "rabbitmqBrokerStorageType": {"value": "<storage-type token — see below>"},      // NOT a readable string; a RegionlessRateCode
+  "rabbitmqStoragePerBroker":  {"value": "<GB>", "unit": "gb|NA"},                 // capital 'S' in 'Storage', no 'Clustered'
+  "dataTransfer": {                                                                // SAME 3-entry array shape as Cluster path
+    "value": [
+      { "entryType": "INBOUND",      "value": "<X|''>", "unit": "tb_month", "fromRegion": "<region|''>" },
+      { "entryType": "OUTBOUND",     "value": "<X|''>", "unit": "tb_month", "toRegion":   "<region|''>" },
+      { "entryType": "INTRA_REGION", "value": "<X|''>", "unit": "tb_month" }
+    ]
+  }
+}
+```
+
+There is **no** `rabbitmqNumberOfClusteredBrokers` / `numberOfBrokers` field — a single-instance broker is always one node. The form shows a "Number of Brokers running" input but the captured cc omits it; do not add it.
+
+**`rabbitmqBrokerStorageType` tokens** (the "Broker storage type" dropdown — these are `RegionlessRateCode`s, region-independent; the SPA resolves the per-region price):
+
+| Storage type label | Token | Per-GB-mo rate source |
+|---|---|---|
+| Throughput optimized (EBS) — default for m5.* | `esp4MPQi7KC4ZP_fJVh0_C5OFda2B5SOjR_Yc8g-bxM` | EBS rate (eu-central-1: $0.119; eu-west-1: $0.11; us-east-2: $0.10) |
+| Durability optimized (Amazon EFS) | `Watrf2j3RTOHvqFvNyHO2__jk9suw5nwtH-siXP1ch0` (`Broker Storage GB Mo`) | EFS rate |
+
+The EBS storage token is not in `resolve_token.py --dump-friendly` (it has no friendly key); look it up by `RegionlessRateCode` directly in `mq.json` if you need its per-region price, or use the EBS per-GB-mo rate for the region.
+
+### Formula (RabbitMQ Single Instance)
+
+```
+broker.monthly      = 730 * broker_hourly_rate(RabbitMQ Single Instance mq <type>, region)   // 1 broker
+storage.monthly     = rabbitmqStoragePerBroker_GB * storage_per_gb_month(storage-type, region)
+data_xfer.monthly   = sum over dataTransfer.value entries (see VPC dataTransferVpc formula)
+serviceCost.monthly = broker.monthly + storage.monthly + data_xfer.monthly
+```
+
+Verified example (eu-central-1, mq.m5.2xlarge, EBS, 1024 GB, no DT): `730 × $1.38 + 1024 × $0.119 = $1,129.26`. The instance hourly rate is `mq.json`'s `regions[<region>][RabbitMQ Single Instance mq <type>].price`.
+
+> **Recompute validation caveat:** headless Chromium does **not** run the calculator's client-side price engine — a freshly hand-built, fully-valid single-instance line displays `$0.00` in headless even though the cc is correct. So the live-SPA recompute check (SKILL.md step 7) can confirm the cc **shape** round-trips (region/engine/broker-type/instance/storage all recognized, no "incompatible inputs" error, configSummary regenerates) but **cannot** confirm the numeric cost headless. Confirm the number against the `mq.json` catalog rates instead — that is the same pricing source the SPA uses.
+
+### configSummary template (RabbitMQ Single Instance)
+
+```
+Broker type (Single-instance Broker), DT Inbound: <Internet|Not selected> (<X> TB per month), DT Outbound: <Internet|<region>|Not selected> (<X> TB per month), DT Intra-Region: (<X> TB per month), Storage per Broker (<X> GB), Amazon RabbitMQ Broker Instance (<instance type label>)
+```
 
 ---
 
@@ -308,5 +349,5 @@ Data transfer SKUs live under `AmazonEC2`; see `vpc.md` Pricing API filters.
 
 - **Path 1 (RabbitMQ Cluster)**: verified from `captures/saveAs/per-service/amazonMQ.json` (eu-west-1). `serviceCost.monthly: $8,167.30` matches `10 × 730 × $0.963 (catalog rate) + storage + DT` within tolerance.
 - **Paths 2/3 (ActiveMQ Single Instance / Active-Standby)**: shape from `captures/bundle.js` `singleInstanceBroker` and `activeInstanceBroker` templates; token table from `mq.json` catalog. Round-trip a test save once before quoting at scale.
-- **Path 4 (RabbitMQ Single Instance)**: token table present in catalog; cc shape is speculative (mirrors Cluster with brokers=1). Capture HAR to confirm.
+- **Path 4 (RabbitMQ Single Instance)**: **verified** from a live-SPA `sessionStorage` capture (2026-06). cc uses `rabbitBrokerType: "1"`, `rabbitmqInstanceType`, `rabbitmqBrokerStorageType` (token), `rabbitmqStoragePerBroker`, `dataTransfer` — and NO broker-count field. Example: eu-central-1 mq.m5.2xlarge + EBS 1024 GB = `730 × $1.38 + 1024 × $0.119 = $1,129.26`. Numeric recompute is not observable headless (price engine doesn't run); validate the number against `mq.json` rates.
 - The full friendly→token mapping above is from a catalog snapshot; re-run `python3 scripts/resolve_token.py mq --dump-friendly` to refresh if the catalog adds new instance types or ActiveMQ CRDR variants.

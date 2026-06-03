@@ -32,7 +32,9 @@ Single line item that covers the Aurora PostgreSQL cluster: provisioned and/or S
         "Instance Type":     {"value": "db.r6g.large"},                  // provisioned class, or "Serverless v2" / "Aurora Limitless"
                                                                           //   for ACU-priced tiers
         "Number of Nodes":   {"value": "1"},                              // writer + reader count covered by this row
-        "TermType":          {"value": "OnDemand"},                       // OnDemand | Reserved-1yr-No-Upfront-Standard | ...
+        "TermType":          {"value": "Reserved"},                       // OnDemand | Reserved  (Reserved REQUIRES the two fields below)
+        "LeaseContractLength": {"value": "1yr"},                          // Reserved only: "1yr" | "3yr"
+        "PurchaseOption":    {"value": "No Upfront"},                     // Reserved only: "No Upfront" | "Partial Upfront" | "All Upfront"
         "undefined": {                                                    // utilization (the form schema literally keys this "undefined")
           "value": {
             "selectedId":    "%Utilized/Month",                           // %Utilized/Month | Hours/Month | Hours/Day | Hours/Week
@@ -42,6 +44,14 @@ Single line item that covers the Aurora PostgreSQL cluster: provisioned and/or S
       }
     ]
   },
+  // PRICING STRATEGY (TermType) — the SPA splits Reserved pricing into THREE separate row fields.
+  //   On-Demand: TermType="OnDemand" only; omit LeaseContractLength / PurchaseOption.
+  //   Reserved : TermType="Reserved" PLUS LeaseContractLength ("1yr"|"3yr") PLUS PurchaseOption
+  //              ("No Upfront"|"Partial Upfront"|"All Upfront"). 1yr/No-Upfront IS offered for
+  //              provisioned r6g classes. Aurora has no Convertible class (Standard offering only).
+  //   DO NOT use the OLD packed string TermType:"Reserved-1yr-No-Upfront-Standard" — the SPA does
+  //   not recognize it and recomputes the RI line to ~15% of stored (instance cost drops out,
+  //   only storage/IO remain). See the "Recompute fix" note in Verification.
 
   "storageAmount":            {"value": "100", "unit": "gb|NA"},          // cluster volume GB. Billed identically for all instances —
                                                                           //   do NOT multiply by Number of Nodes.
@@ -235,7 +245,7 @@ serviceCost.monthly = sum_of_all_of_the_above
 serviceCost.upfront = sum of any RI All/Partial Upfront amounts across rows
 ```
 
-For Reserved rows, replace `inst_hr * hours_per_mo` with the Reserved `Hrs` priceDimension times 730 and add the `Quantity` upfront fee to `serviceCost.upfront`. For 1Y All Upfront the `Hrs` rate is 0 and the full term cost lives in the upfront fee.
+For Reserved rows, replace `inst_hr * hours_per_mo` with the Reserved `Hrs` priceDimension times 730 and add the `Quantity` upfront fee to `serviceCost.upfront`. For 1Y All Upfront the `Hrs` rate is 0 and the full term cost lives in the upfront fee. The Reserved selection is encoded in the `columnFormIPM` row as the three split fields `TermType:"Reserved"` + `LeaseContractLength` + `PurchaseOption` (see the calculationComponents shape) — NOT a single packed `TermType` string.
 
 ## configSummary template
 
@@ -270,8 +280,20 @@ The captured body uses exactly this layout — keep the parenthetical phrasing a
 
 ## Verification
 
+### Recompute fix (2026-06, live-SPA verified)
+
+The prior module encoded Reserved Instance pricing as a single packed field `TermType: {"value": "Reserved-1yr-No-Upfront-Standard"}`. The SPA does **not** recognize that string: on "Update estimate" Aurora RI lines recomputed to ~15% of stored (e.g. $2600.26 → $404.61 — instance cost dropped out, only storage/IO survived). The live form splits RI pricing into **three** separate fields inside each `columnFormIPM` row: `TermType: "Reserved"`, `LeaseContractLength: "1yr"` (or `"3yr"`), `PurchaseOption: "No Upfront"` (or `"Partial Upfront"`/`"All Upfront"`). 1yr/No-Upfront Reserved IS offered for provisioned r6g classes (terms 1yr/3yr; payment All/Partial/No Upfront). The three-field shape above is now the verified, recompute-safe encoding. (One-line reminder: the OLD packed-string form recomputes to ~15% of stored.)
+
+Verified against four fragments captured from the LIVE AWS Pricing Calculator SPA (all recompute-safe, all 1yr / No Upfront / Reserved):
+- `/tmp/rbm_frags/31.json` — eu-west-1, 2× `db.r6g.4xlarge` Multi-AZ (`Number of Nodes`=2), 3000 GB, `totalReads_BaseIO`≈129.2211913657119 preserved for ~$75/mo I/O; `serviceCost.monthly` = $2599.87.
+- `/tmp/rbm_frags/56.json` — eu-west-1, 1× `db.r6g.xlarge` Single-AZ, 250 GB; `serviceCost.monthly` = $302.49.
+- `/tmp/rbm_frags/60.json` — eu-west-1, 1× `db.r6g.large`, 100 GB; `serviceCost.monthly` = $148.82.
+- `/tmp/rbm_frags/115.json` — eu-central-1, 1× `db.r6g.4xlarge` (Aurora Global Database secondary), 3000 GB; `serviceCost.monthly` = $1716.55.
+
+Note on I/O: idx31 preserves `totalReads_BaseIO` ≈ 129.22 (per second) which the SPA prices at ~$75/mo. Keep real captured IO values verbatim — do not reset them to the `"1"` placeholder when a fragment carries a measured rate.
+
 - **Ground-truth HAR file**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonRDSAuroraPostgreSQLCompatibleDB.json` — provisioned `db.r6g.large` Aurora Standard in `us-east-2`, single node, 100% utilization, 100 GB cluster storage, 100 GB additional backup, 100 GB/month snapshot export, RDS Proxy on, Database Insights Advanced on, Aurora Extended Support on (year1+2), IO placeholders at `1/sec`. captured `serviceCost.monthly` = $243.58, `upfront` = $0.
-- **Verified end-to-end** (capture is a real working POST): provisioned-instance shape, Aurora Standard edition, OnDemand pricing strategy, cluster storage field, backup-storage and snapshot-export fields, all three add-on flags, the `"undefined"` utilization key, and the configSummary phrasing.
+- **Verified end-to-end** (captures are real working POSTs): provisioned-instance shape, Aurora Standard edition, both OnDemand and the 3-field Reserved pricing strategy, cluster storage field, backup-storage and snapshot-export fields, all three add-on flags, the `"undefined"` utilization key, the preserved measured-IO value, and the configSummary phrasing.
 - **Verify before relying on this**:
   - Aurora Serverless v2 / Limitless row shape (min/max ACU field names not captured)
   - Aurora Global Database flag and replicated-write-IO field

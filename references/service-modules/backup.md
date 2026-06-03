@@ -2,6 +2,9 @@
 
 AWS Backup is a **group** service: the line item has `subServices: [...]` rather than top-level `calculationComponents`. Each backup source (EFS, EBS, S3, RDS, DynamoDB, etc.) is its own sub-service with its own `calculationComponents`, even when the user only configures one source. The unused sub-services should still be present with `annualGrowthOfPrimaryUsage` and `dailyChangeOfPrimaryUsage` set to `"0"` — see the captured body for the exact shape.
 
+> [!WARNING]
+> **Percentage fields store the LITERAL percent value, NOT a fraction.** The `annualGrowthOfPrimaryUsage` and `dailyChangeOfPrimaryUsage` "%" inputs (and any other "%"-unit field) take the number the user types into the calculator's percent box: **10% annual growth ⇒ `"10"`**, **3% daily change ⇒ `"3"`**. Do **not** divide by 100 and store `"0.1"` / `"0.03"`. The OLD fractional form recomputes to near-zero growth/change on "Update estimate" (the SPA reads `"0.1"` as 0.1%, ~zero), collapsing the cost. See the **Recompute fix (2026-06, live-SPA verified)** note below.
+
 ## Group-level header
 
 ```json
@@ -55,8 +58,8 @@ Each entry is a flat object with the same envelope. The richest variant — appe
   "region":       "us-east-2",
   "description":  null,
   "calculationComponents": {
-    "annualGrowthOfPrimaryUsage": {"value": "1"},          // percent, string. "0" disables sub-service charges
-    "dailyChangeOfPrimaryUsage":  {"value": "1"},          // percent, string. "0" disables sub-service charges
+    "annualGrowthOfPrimaryUsage": {"value": "1"},          // LITERAL percent, string (1 = 1%, 10 = 10%). NOT a fraction. "0" disables growth
+    "dailyChangeOfPrimaryUsage":  {"value": "1"},          // LITERAL percent, string (1 = 1%, 3 = 3%). NOT a fraction. "0" disables change
     "dataSize":                   {"value": "10", "unit": "gb|NA"},   // primary data backed up (GB)
     "hourlyPlansWarmDays":        {"value": "10", "unit": "day"},     // retention in warm tier per plan
     "dailyPlansWarmDays":         {"value": "10", "unit": "day"},
@@ -78,6 +81,59 @@ Sources that support continuous backups (S3, RDS, Aurora, SAP HANA) include an a
 ```
 
 The key uses snake_case with a capital `C` exactly as shown — this is the SPA's field name; deviating breaks the SPA recompute.
+
+### Verified captured sub-sections (literal-percent, live-SPA recompute-safe)
+
+These are lifted verbatim from live AWS Pricing Calculator captures and round-trip through "Update estimate" without collapsing. Note the percent fields are `"10"` / `"3"` — literal percents.
+
+**S3 backup** — 512 GB primary, 10% annual growth, 3% daily change (recomputes to `monthly: 48.6`):
+
+```jsonc
+{
+  "serviceCode":  "s3Backup",
+  "estimateFor":  "sssBackup",
+  "version":      "0.0.18",
+  "region":       "eu-west-1",
+  "description":  null,
+  "calculationComponents": {
+    "annualGrowthOfPrimaryUsage": {"value": "10"},                   // 10% — LITERAL, not "0.1"
+    "dailyChangeOfPrimaryUsage":  {"value": "3"},                    // 3%  — LITERAL, not "0.03"
+    "dataSize":                   {"value": "512", "unit": "gb|NA"},
+    "Continuous_backups_warm_retention_period": {"value": "1", "unit": "day"},
+    "hourlyPlansWarmDays":        {"value": "1", "unit": "day"},
+    "dailyPlansWarmDays":         {"value": "1", "unit": "day"},
+    "weeklyPlansWarmDays":        {"value": "1", "unit": "week"},
+    "monthlyPlansWarmDays":       {"value": "1", "unit": "month"}
+  },
+  "serviceCost": { "monthly": 48.6 }
+}
+```
+
+**RDS backup** — 2000 GB primary, 10% annual growth, 3% daily change (recomputes to `monthly: 154.94`):
+
+```jsonc
+{
+  "serviceCode":  "rdsBackup",
+  "estimateFor":  "rdsBackup",
+  "version":      "0.0.11",
+  "region":       "eu-west-1",
+  "description":  null,
+  "calculationComponents": {
+    "annualGrowthOfPrimaryUsage": {"value": "10"},                   // 10% — LITERAL, not "0.1"
+    "dailyChangeOfPrimaryUsage":  {"value": "3"},                    // 3%  — LITERAL, not "0.03"
+    "dataSize":                   {"value": "2000", "unit": "gb|NA"},
+    "Continuous_backups_warm_retention_period": {"value": "1", "unit": "day"},
+    "hourlyPlansWarmDays":        {"value": "0", "unit": "day"},
+    "dailyPlansWarmDays":         {"value": "1", "unit": "day"},
+    "weeklyPlansWarmDays":        {"value": "1", "unit": "week"},
+    "monthlyPlansWarmDays":       {"value": "1", "unit": "month"}
+  },
+  "serviceCost": { "monthly": 154.94 }
+}
+```
+
+> [!CAUTION]
+> The OLD module stored these as fractions (`annualGrowthOfPrimaryUsage = "0.1"`, `dailyChangeOfPrimaryUsage = "0.03"`). On "Update estimate" the SPA reads those as 0.1% / 0.03% — effectively zero growth and change — and collapses the cost: **RDS backup $154.94 → ~$1.64**, **S3 backup $48.6 → ~$25.86 (≈ −40%)**. Always emit the literal percent (`"10"`, `"3"`).
 
 Sources without cold tier (S3, RDS, Aurora, Neptune, FSx, Storage Gateway in the captured body) **omit** the `*PlansColdDays` keys entirely rather than setting them to `"0"`. Follow the capture: present the keys only when the user actually configures a cold tier for a source that supports it.
 
@@ -163,7 +219,7 @@ For any source flagged "verify before relying on this": surface the gap in the b
 
 ## Multipliers / formula
 
-The calculator's AWS Backup form models a retention schedule, not a single GB-month figure. For one source with one plan kind (e.g. daily backups, 7-day warm retention, 0 cold):
+The calculator's AWS Backup form models a retention schedule, not a single GB-month figure. The `annualGrowth` and `dailyChange` terms below are **literal percents** (e.g. `10`, `3`) — hence the `/100` in the formula. Do not pre-divide them into the stored field. For one source with one plan kind (e.g. daily backups, 7-day warm retention, 0 cold):
 
 ```
 monthly_backup_count   ≈ 30 / interval_days        # 30 for daily, 4 for weekly, ~720 for hourly, 1 for monthly
@@ -204,19 +260,30 @@ Estimated annual increase in primary data (%) (0), Estimated daily change of pri
 
 The capture sometimes orders `daily change` before `annual growth` and sometimes the reverse — the SPA does not appear to be strict about ordering within a source, but be consistent within one estimate.
 
+The `(%)` phrases must carry the **literal percent** value, matching the `calculationComponents` (`10`, `3`), e.g. `Estimated annual increase in primary data (%) (10), Estimated daily change of primary data (%) (3)`. Note: the buggy live captures (frags 49/50) show `(0.1)` / `(0.03)` in `configSummary` — that is the fractional-trap artifact, not the correct form. `configSummary` is display-only and the SPA rebuilds it on recompute, so it is not load-critical, but emit the literal percent for consistency.
+
 ## Defaults to apply when the user is silent
 
 | Field | Default | Why |
 |---|---|---|
 | Sub-services not mentioned | growth=0, change=0, no other keys | Match capture — every source must be present in `subServices` |
-| `annualGrowthOfPrimaryUsage` | `"0"` (configured: `"1"`) | Calculator default in capture is 1% for configured sources |
-| `dailyChangeOfPrimaryUsage` | `"0"` (configured: `"1"`) | Same — 1% baseline |
+| `annualGrowthOfPrimaryUsage` | `"0"` (configured: `"1"`) | LITERAL percent string (`"1"`=1%, `"10"`=10%). Never store the fraction `"0.1"`. Calculator default in capture is 1% for configured sources |
+| `dailyChangeOfPrimaryUsage` | `"0"` (configured: `"1"`) | LITERAL percent string (`"1"`=1%, `"3"`=3%). Never store the fraction `"0.03"`. Same — 1% baseline |
 | `dataSize` | `"1"` GB | Smallest unit — flag in breakdown |
 | Warm retention (any plan) | `"1"` Days/Weeks/Months | Calculator's minimum |
 | Cold retention | omitted unless source supports cold AND user asked | Don't add cold keys to sources that lack cold tier in capture |
 | Continuous backup retention | omitted unless source supports continuous (S3/RDS/Aurora/SAP HANA) | Field name is `Continuous_backups_warm_retention_period` |
 | `region` | inherit group region | Sub-services share region |
 | `serviceCost.upfront` | omitted | Group has no upfront component |
+
+## Recompute fix (2026-06, live-SPA verified)
+
+The percentage fields were corrected from **fractions to literal percents** after a live AWS Pricing Calculator SPA recompute test:
+
+- **Bug**: prior module stored `annualGrowthOfPrimaryUsage = "0.1"` and `dailyChangeOfPrimaryUsage = "0.03"` (fractions). The calculator's "%" inputs store the literal value, so the SPA read these as 0.1% / 0.03% ≈ zero growth/change.
+- **Symptom**: on "Update estimate", costs collapsed — RDS backup **$154.94 → $1.64**, S3 backup **$48.6 → ~$25.86 (≈ −40%)**.
+- **Fix**: store the literal percent — `"10"` for 10% annual growth, `"3"` for 3% daily change. Verified against live captures (frags 49 = S3 512 GB, 50 = RDS 2000 GB) that round-trip to `monthly: 48.6` and `154.94` respectively.
+- **Scope**: applies to every "%"-unit field (`annualGrowthOfPrimaryUsage`, `dailyChangeOfPrimaryUsage`, and any future percent input).
 
 ## Verification
 
