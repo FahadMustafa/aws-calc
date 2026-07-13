@@ -69,7 +69,7 @@ Verified absent from:
 - `AmazonCloudFront` Pricing API (productFamily values: `Data Transfer`, `Fee`, `RealTime`, `Request`, `Serverless` — none of which surface the flat-rate plans). The `Fee` family only contains StaticIP-IPv4/IPv6, custom SSL cert, and invalidation overage fees.
 - `meteredUnitMaps/cloudfront/USD/current/cloudfront.json` (the calculator's runtime price map referenced by `mappingDefinitionName: "cloudfront"` and the `priceCF` component). This map contains usage-based rates (Request-Tier1/Tier2, DataTransfer-Out-Bytes) but no plan-level keys.
 
-Practical implication: **bake the four rates into this module** and re-verify if AWS changes the offering. The version number in the header (`0.0.45`) is the canary — bump the rate table when the captured version changes.
+Practical implication: **bake the nine rates into this module** and re-verify if AWS changes the offering. The version number in the header (`0.0.47`) is the canary — bump the rate table when the captured version changes.
 
 If/when a usage-based CloudFront module is added, that one **will** use the Pricing API with `--service-code AmazonCloudFront --filter productFamily="Data Transfer"` (and `Request`).
 
@@ -90,13 +90,13 @@ serviceCost.monthly = sum of all nine plan costs
 serviceCost.upfront = 0
 ```
 
-No prorating, no tiers, no discounts. The SPA's `mathsSection` confirms this is a straight `multiplication` per plan followed by an `addition` (id `totCost`) across all four. `decimalPlaces` on each multiplication is 2, but since the constants are integers and the quantities are integers, the result is always a whole-dollar integer in practice.
+No prorating, no tiers, no discounts. The SPA's `mathsSection` confirms this is a straight `multiplication` per plan followed by an `addition` (id `totCost`) across all nine. `decimalPlaces` on each multiplication is 2, but since the constants are integers and the quantities are integers, the result is always a whole-dollar integer in practice.
 
 There is no annual / RI / Savings Plan term for these flat-rate bundles. CloudFront Security Savings Bundle (a separate commercial offering) is **not** this form — do not confuse them.
 
 ## configSummary template
 
-Match the captured phrasing exactly:
+**Original four plans — match the captured phrasing exactly:**
 
 ```
 Free Plan (<H>), Pro Plan (<R>), Business Plan (<B>), Premium Plan (<M>)
@@ -108,9 +108,24 @@ Where:
 - `<B>` = value of `Enter_Quantity_pp`
 - `<M>` = value of `Enter_Quantity_premp`
 
-Note the **display order** (Free → Pro → Business → Premium) does not match the alphabetical order of the field ids — preserve the captured order to match the SPA's card rendering.
+**Five new Premium bundle tiers (`0.0.47`) — INFERRED, NOT CAPTURED. Verify before relying on this.** No saved estimate has round-tripped a new-tier line item yet (see Verification), so the exact summary phrasing the SPA emits for these is unconfirmed. Extrapolating the original pattern (full plan label + quantity in parentheses), the likely form appends the selected new tiers after the original four:
 
-The SPA may also omit plans with quantity 0 from the summary in its own UI; the captured body included all four because all four were non-zero. When emitting an estimate with some zero quantities, the safer default is to still list all four (matches the captured shape and the SPA accepts it).
+```
+Premium (750M / 75TB) Plan (<P1>), Premium (1.25B / 125TB) Plan (<P2>), Premium (2B / 200TB) Plan (<P3>), Premium (3.5B / 350TB) Plan (<P4>), Premium (6B / 600TB) Plan (<P5>)
+```
+
+Where:
+- `<P1>` = value of `Enter_Quantity_prem750m75tb`
+- `<P2>` = value of `Enter_Quantity_prem125b125tb`
+- `<P3>` = value of `Enter_Quantity_prem2b200tb`
+- `<P4>` = value of `Enter_Quantity_prem35b350tb`
+- `<P5>` = value of `Enter_Quantity_prem6b600tb`
+
+The exact label text (spacing, "req"/"TB" wording, and whether the SPA abbreviates as above or spells out "750M req / 75 TB" per the mapping table) is unverified — capture a HAR the first time a user selects a new tier and reconcile this template to the captured string.
+
+Note the **display order** (Free → Pro → Business → Premium → the five bundle tiers in ascending price) does not match the alphabetical order of the field ids — preserve this order to match the SPA's card rendering.
+
+The SPA may also omit plans with quantity 0 from the summary in its own UI; the captured body included all four originals because all four were non-zero. When emitting an estimate with some zero quantities, the safer default is to still list at least the original four (matches the captured shape and the SPA accepts it); for the five new tiers, prefer listing only the non-zero ones until the emitted phrasing is captured and confirmed.
 
 ## Defaults
 

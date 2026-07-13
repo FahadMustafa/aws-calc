@@ -271,7 +271,7 @@ Reproduced the captured `serviceCost.monthly` of **$6232.05** in us-east-2 for `
 | Additional backup | $0.095/GB-mo | 10 GB | $0.95 |
 | **Total** | | | **$6,232.05** |
 
-Captured shape lives in `/tmp/aws_calc_onboard/rds_sqlserver.json`. End-to-end matches to the cent.
+Captured shape lives in `/tmp/aws_calc_onboard/rds_sqlserver.json` (path was ephemeral; file lost — re-capture needed). End-to-end matches to the cent.
 
 ### Live-SPA verified captures (2026-06)
 

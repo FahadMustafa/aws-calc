@@ -174,7 +174,7 @@ Source Type (<Direct PUT or Kinesis Data Stream | Kinesis Data Streams | MSK>), 
 
 ## Verification
 
-- Source: captured saveAs body at `/tmp/aws_calc_onboard/amazonKinesisFirehose.json` (region `us-east-2`, full feature set enabled).
+- Source: captured saveAs body at `/tmp/aws_calc_onboard/amazonKinesisFirehose.json` (path was ephemeral; file lost — re-capture needed; region `us-east-2`, full feature set enabled).
 - Region tested end-to-end: `us-east-2` / `US East (Ohio)`.
 - Reproduced monthly **$10,112.96 within $0.01** using the formula above and rates pulled live via `pricing_client.py --profile zaintech-cloudtools` against ServiceCode `AmazonKinesisFirehose`.
 - Inferred but not directly captured:

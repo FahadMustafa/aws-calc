@@ -175,7 +175,7 @@ Reproduced against the captured `serviceCost.monthly = $90.20` in `us-east-2` wi
 - S3 recovery point scan: 10 × $0.05 = **$0.50**
 - CloudTrail / S3 events / K8s events / S3 PUT: $0.00004 + $0.000008 + $0.000016 + $0.00215 ≈ **$0.00**
 
-**Hand total: $90.20** — matches the captured value exactly. Captured shape: `/tmp/aws_calc_onboard/amazonGuardDuty.json`.
+**Hand total: $90.20** — matches the captured value exactly. Captured shape: `/tmp/aws_calc_onboard/amazonGuardDuty.json` (path was ephemeral; file lost — re-capture needed).
 
 ## Ambiguity worth flagging before relying on this
 

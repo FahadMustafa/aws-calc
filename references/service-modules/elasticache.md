@@ -105,7 +105,11 @@ Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and E
 
 ### TermType string values
 
-For the node-based sub-forms (`columnFormIPM`, `columnFormIPMDT`) the captured `TermType` is the literal `"OnDemand"`. Reserved Cache Node forms are emitted by the same dropdown — likely as `"Reserved-1yr-No-Upfront-Standard"`, `"Reserved-1yr-Partial-Upfront-Standard"`, `"Reserved-1yr-All-Upfront-Standard"`, `"Reserved-3yr-No-Upfront-Standard"`, `"Reserved-3yr-Partial-Upfront-Standard"`, `"Reserved-3yr-All-Upfront-Standard"` (mirroring the RDS module's convention) — but these have NOT been seen in a captured saveAs body. **Verify before relying on this.**
+For the node-based sub-forms (`columnFormIPM`, `columnFormIPMDT`) the captured `TermType` is the literal `"OnDemand"` — the only value verified end-to-end here. Reserved Cache Node forms are emitted by the same dropdown, but **their encoding has NOT been seen in a captured ElastiCache saveAs body.**
+
+> **Do NOT emit a Reserved ElastiCache line as a packed `TermType` string.** The single packed form `"Reserved-1yr-No-Upfront-Standard"` (and its `-Partial-Upfront-` / `-All-Upfront-` / `-3yr-` variants) is **likely WRONG**. The sibling `aurora-postgres.md` proved that exact packed pattern collapses Reserved lines to ~15% of stored on "Update estimate" (instance cost drops out, only storage/IO survive — e.g. $2600.26 → $404.61); `rds-sqlserver.md` proved the same packed string silently recomputes to $0.00. Both forms only round-trip Reserved pricing when it is split into three sibling row fields: `TermType: "Reserved"` + `LeaseContractLength` (`"1yr"`/`"3yr"`) + `PurchaseOption` (`"No Upfront"`/`"Partial Upfront"`/`"All Upfront"`). Whether ElastiCache's form uses that same three-field shape is **UNVERIFIED** — no capture exists either way.
+
+**Instruction: refuse the Reserved line, or capture a HAR first.** Until a Reserved ElastiCache saveAs body is captured and recompute-validated (drive the SPA's "Update estimate" per `SKILL.md` step 7, or capture a fresh Reserved HAR), do not emit a Reserved node line. Fall back to `TermType: "OnDemand"` or tell the user a Reserved-RI capture is needed. Do not copy the packed-string pattern from any module — it is the known-broken shape on the sibling forms. On-Demand lines are unaffected.
 
 ### EngineType opaque tokens
 

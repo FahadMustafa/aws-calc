@@ -1,0 +1,158 @@
+{
+  "groupSubtotal": {
+    "monthly": 1.02
+  },
+  "groups": {
+    "Test-e693d1fb-dc3c-4fbb-b297-662457529836": {
+      "groupSubtotal": {
+        "monthly": 8167.3
+      },
+      "groups": {},
+      "name": "Test",
+      "services": {
+        "amazonMQ-f50d9ce9-c557-4427-854c-1e189193cfc6": {
+          "calculationComponents": {
+            "dataTransfer": {
+              "value": [
+                {
+                  "entryType": "INBOUND",
+                  "fromRegion": "External",
+                  "unit": "tb_month",
+                  "value": "10"
+                },
+                {
+                  "entryType": "OUTBOUND",
+                  "toRegion": "External",
+                  "unit": "tb_month",
+                  "value": "10"
+                },
+                {
+                  "entryType": "INTRA_REGION",
+                  "unit": "tb_month",
+                  "value": "10"
+                }
+              ]
+            },
+            "rabbitBrokerType": {
+              "value": "0"
+            },
+            "rabbitmqInstanceTypeClustered": {
+              "value": "5hcZU6WguRUktrgs8rMw8I50JgkU3TyzOOdhtsRRjXs"
+            },
+            "rabbitmqNumberOfClusteredBrokers": {
+              "value": "10"
+            },
+            "rabbitmqstoragePerNodeClustered": {
+              "unit": "gb|NA",
+              "value": "10"
+            }
+          },
+          "configSummary": "Broker type (3-node cluster Broker), DT Inbound: Internet (10 TB per month), DT Outbound: Internet (10 TB per month), DT Intra-Region: (10 TB per month), Amazon RabbitMQ Broker Instance (mq.m5.large), Number of clustered Brokers (10), Storage per node (10 GB)",
+          "description": null,
+          "estimateFor": "rabbitMQBroker",
+          "region": "eu-west-1",
+          "regionName": "Europe (Ireland)",
+          "serviceCode": "amazonMQ",
+          "serviceCost": {
+            "monthly": 8167.3
+          },
+          "serviceName": "Amazon MQ",
+          "version": "0.0.59"
+        }
+      },
+      "totalCost": {
+        "monthly": 8167.3,
+        "upfront": 0
+      }
+    }
+  },
+  "metaData": {
+    "createdOn": "2026-05-21T06:27:47.550Z",
+    "currency": "USD",
+    "locale": "en_US",
+    "source": "calculator-platform"
+  },
+  "name": "My Estimate",
+  "services": {
+    "amazonBedrock-f7020c86-7a8e-4e6b-b960-12ebb0399e9b": {
+      "configSummary": "Select the inference route (In Region), Select the inference type (On Demand - Standard), Average requests per minute (1), Hours per day at this rate (8), Average input tokens per request (1), Average output tokens per request (1), Average input images per request (1), Average input image length in pixels (L) (100), Average input image width in pixels (W) (100)",
+      "description": null,
+      "estimateFor": "amazonBedrockClassesGroup",
+      "region": "eu-west-1",
+      "regionName": "Europe (Ireland)",
+      "serviceCode": "amazonBedrock",
+      "serviceCost": {
+        "monthly": 1.02
+      },
+      "serviceName": "Amazon Bedrock",
+      "subServices": [
+        {
+          "calculationComponents": {
+            "avgImageLengthInPixelsIRstan": {
+              "value": "100"
+            },
+            "avgImageWidthInPixelsIRstan": {
+              "value": "100"
+            },
+            "avgImagesPerRequestIRstan": {
+              "value": "1"
+            },
+            "avgInputTokensPerRequestIRstan": {
+              "value": "1"
+            },
+            "avgOutputTokensPerRequestIRstan": {
+              "value": "1"
+            },
+            "avgRequestsPerMinIRstan": {
+              "value": "1"
+            },
+            "cacheRateIRstan": {
+              "value": "50"
+            },
+            "cacheReadIRstan": {
+              "value": "n9r1OkCw7sahKrcm5k_dLlzEu09FwTSCVv5QwmP_Hs4"
+            },
+            "cacheWriteIRstan": {
+              "value": "mJCg-f97ByF7pKaysTOJs737vV6RxBfUYYMwhpWBEvU"
+            },
+            "hoursPerDayAtThisRateIRstan": {
+              "value": "8"
+            },
+            "imageInputIRstan": {
+              "value": "1"
+            },
+            "location": {
+              "value": "ir"
+            },
+            "modelSelectionIRstan": {
+              "value": "IL0BVf3Bmmr22TrGlUfHnPwVaiStbtOD-UyMVzK25bg"
+            },
+            "selectedModelIRstan": {
+              "value": "VAgU0B18jsXx-EUOFzoOdJKya4ShUCjz2HUNlOpDZLM"
+            },
+            "tierIR": {
+              "value": "standard"
+            },
+            "withPromptCachingIRstan": {
+              "value": "1"
+            }
+          },
+          "description": null,
+          "estimateFor": "anthropic",
+          "region": "eu-west-1",
+          "serviceCode": "anthropic",
+          "serviceCost": {
+            "monthly": 1.02
+          },
+          "version": "0.0.37"
+        }
+      ],
+      "version": "0.0.52"
+    }
+  },
+  "support": {},
+  "totalCost": {
+    "monthly": 8168.320000000001,
+    "upfront": 0
+  }
+}

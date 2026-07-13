@@ -200,11 +200,18 @@ If the user says "SNS topic" without specifying type, default to **Standard** on
 
 ## Verification
 
-- **Captured ground truth:** `/tmp/aws_calc_onboard/sns.json` — group `serviceCost.monthly = $231.20`, standard sub-service = $220.92, FIFO sub-service = $10.28, region us-east-2.
+- **Captured ground truth:** `/tmp/aws_calc_onboard/sns.json` (path was ephemeral; file lost — re-capture needed) — group `serviceCost.monthly = $231.20`, standard sub-service = $220.92, FIFO sub-service = $10.28, region us-east-2.
 - **Inputs used:** every `millionPerMonth` and every `gb|month`/`gb|NA` field set to 10; FIFO avg message size 4 KB, 10 subscriptions, 10-day retention.
 - **Reproduced standard ($220.92):** 10*0.50 (requests, no free tier applied) + (10M-100k)*$0.0000006 (HTTP) + (10M-1000)*$0.00002 (email) + 0 (SQS) + 0 (Lambda) + 10*0.19 (Firehose) + (10M-1M)*$5e-7 (mobile push) + 10*0.08 (scanning) + 10*0.19 (audit) + 10*0.09 (outbound-scanned) = 5.00 + 5.94 + 199.98 + 0 + 0 + 1.90 + 4.50 + 0.80 + 1.90 + 0.90 = **$220.92**.
 - **Reproduced FIFO ($10.28):** publishedGB = 10M * 4 KB ≈ 40 GB. 10*$0.30 (requests) + 40*$0.017 (publish payload) + (10*10)*$0.01 (sub messages) + (40*10)*$0.001 (sub payload) + 40*$0.10 (archive processing) + 40*(10/30)*$0.023 (storage) + 10*$0.09 (outbound-scanned) = 3.00 + 0.68 + 1.00 + 0.40 + 4.00 + 0.307 + 0.90 = **$10.287 ≈ $10.28**.
 - **Group total:** 220.92 + 10.28 = $231.20 — matches.
-- **Open question — `simpleNotificationServiceSns_generated_23`:** the `_23` suffix is almost certainly the SPA's auto-numbering of dynamic form fields (each instance increments a counter) and may differ across captures. Treat it as **probably environment-specific**: capture a fresh HAR and confirm the suffix before relying on this literal. If the SPA rejects the saved estimate, suspect this key first. The captured POST was accepted with `_23`, so it works at least sometimes.
+- **Open question — `simpleNotificationServiceSns_generated_23`:** the `_23` suffix is almost certainly the SPA's auto-numbering of dynamic form fields (each instance increments a counter) and may differ across captures. Treat it as **probably environment-specific**: confirm the suffix before relying on this literal. If the SPA rejects the saved estimate, suspect this key first. The captured POST was accepted with `_23`, so it works at least sometimes.
+
+  **Try the public catalog FIRST (before HAR capture).** Per `references/opaque-tokens.md`, the house rule is to first try the world-readable meteredUnitMaps catalog via `scripts/resolve_token.py`. Probe outcome (probed 2026-07-13):
+
+  - `python3 scripts/resolve_token.py sns` → **HIT** (200; 37 regions, 34 friendly→token mappings). The catalog resolves SNS pricing SKUs (e.g. `"Amazon SNS API Requests"`, `"Amazon SNS Message Scanning per GB"`) to their 43-char `RegionlessRateCode` tokens — useful for pricing, but it does **not** contain the `simpleNotificationServiceSns_generated_23` key.
+  - No match for `simpleNotificationServiceSns_generated_23` anywhere in the `sns` catalog.
+
+  Reason: `_generated_N` is the SPA's **form-field identifier** (an auto-numbered form widget), not a `RegionlessRateCode` — a different token class the meteredUnitMaps catalog does not enumerate. So the catalog cannot resolve this suffix today; **capturing a fresh HAR remains the fallback** for confirming it. Try the catalog first anyway (it is cheap and it is the correct source for the pricing tokens), then fall back to HAR only for the `_generated_*` form-field suffix.
 - **Mobile push free tier:** the Pricing API only surfaces the "thereafter" dimension for mobile push endpoints; the 1M-free-per-month tier is documented on the AWS pricing page and matches the captured math, but is not visible via the Price List API.
 - **Standard requests free tier:** the SPA bills `numberOfRequests` flat at $0.50/M without subtracting the documented 1M monthly free tier (the free tier *is* present in the API SKU's `beginRange`/`endRange`). Mirror the SPA's behavior.

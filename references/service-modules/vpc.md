@@ -76,6 +76,13 @@ The live form (`version 0.0.19`) is more complex than the two verified sub-servi
 
 **Do not emit a NAT Gateway line from this partial shape.** It is missing the `regionalNatGateway*` and `_generated_*` fields the form requires, so a saved estimate will error on the recipient's "Update" (the SPA reports the service as incompatible with its inputs). Refuse the NAT Gateway line and offer to capture a HAR to complete the module. Pricing API filters are correct (below) for when the shape is captured. Same rule for any other unverified VPC sub-service.
 
+**Resolving the `networkAddressTranslationNatGateway_generated_*` tokens — try the public catalog FIRST.** Per `references/opaque-tokens.md`, before capturing a HAR you should first try the world-readable meteredUnitMaps catalog via `scripts/resolve_token.py`. Probe outcome (probed 2026-07-13):
+
+- `python3 scripts/resolve_token.py vpc` → **HIT** (200; 105 regions, 38 friendly→token mappings) but the `vpc` catalog contains **no NAT Gateway entries at all** and none of the `networkAddressTranslationNatGateway_generated_*` field names. (Consistent with NAT pricing living under `AmazonEC2`, not `AmazonVPC` — see the pricing filter below.)
+- `natgateway`, `nat`, `amazonvpc` slugs → **MISS** (404).
+
+So the catalog does not resolve these tokens today. Note also that `_generated_N` suffixes are the SPA's **form-field identifiers** (auto-numbered form widgets), not the 43-char `RegionlessRateCode` values the catalog indexes — a different token class the meteredUnitMaps catalog does not enumerate. **HAR capture remains the fallback** for the NAT Gateway shape. Still try the catalog first when the slug list grows; re-probe rather than assuming.
+
 ### Data Transfer (`dataTransferVpc`)
 
 ```jsonc
@@ -221,8 +228,11 @@ S2S VPN monthly        = vpn_per_hour * connection_count * vpn_hours_per_month
                                                        * vpnConnection_numberOfWorkDays.value
 TGW attachment monthly = tgw_attach_per_hour * 730 * numberOfTransitGatewayAttachments
 TGW data monthly       = tgw_per_gb * dataProcessedPerTransitGatewayAttachment * numberOfTransitGatewayAttachments
-NAT GW hourly monthly  = nat_per_hour * 730 * numberOfNATGateways
-NAT GW data monthly    = nat_per_gb * dataProcessedPerNATGateway * numberOfNATGateways
+# NAT Gateway — pricing-reference ONLY. Do NOT emit a NAT line from this (see the
+# NAT Gateway sub-service section: the cc shape is incomplete, refuse + offer HAR).
+# Field name is numberOfGateways (NOT the old wrong numberOfNATGateways).
+NAT GW hourly monthly  = nat_per_hour * 730 * numberOfGateways
+NAT GW data monthly    = nat_per_gb * dataProcessedPerNATGateway * numberOfGateways
 
 # Data transfer — walk the entries array, apply the per-entryType SKU + tier
 data_xfer monthly      = sum over entries of:
@@ -261,7 +271,7 @@ The captured estimate's S2S VPN priced at $73/mo for 2 connections × 24h × 22 
 |---|---|
 | numberOfSiteToSiteVPNConnections | "0" (no VPN) |
 | numberOfTransitGatewayAttachments | "0" (no TGW) |
-| numberOfNATGateways | "0" (no NAT GW) |
+| numberOfGateways (NAT GW) | "0" — pricing-reference only; the NAT sub-service is NOT emittable (refuse + offer HAR, see its section). Field name is `numberOfGateways`, not the old wrong `numberOfNATGateways`. |
 | dataTransfer.value (the array) | omit `dataTransferVpc` entirely if the user did not mention data transfer; otherwise include all three entryTypes with `"0"` for the ones the user did not specify |
 | numberOfInterfaceVPCEndpointsPerRegion | "0" (omit `awsPrivateLinkVpc` entirely if not mentioned) |
 | numberOfAvailabilityZonesEndpointsDeployed | match the user's `numberOfAvailabilityZones` for the VPC; default `"2"` if unspecified |

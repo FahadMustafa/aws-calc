@@ -60,7 +60,7 @@ A group lives under the body's `groups` dict, keyed by `<userGivenName>-<uuid4>`
 
 ### Anchor example
 
-A real grouped body is at `captures/saveAs/per-service/_groups-example-body.json` (one ungrouped line + one grouped line). Inspect it before constructing your first multi-group estimate.
+A real grouped body is at `references/examples/groups-example-body.json` (one ungrouped line + one grouped line). Inspect it before constructing your first multi-group estimate.
 
 ## Per-line-item shape (flat services)
 

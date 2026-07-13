@@ -86,7 +86,7 @@ Single OnDemand priceDimension, flat: $0.10 / million in us-east-2. (No tiering 
 --filter transferType=AWS Outbound
 ```
 
-Same tiered structure used by EC2 (10 GB free → 10 TB / 40 TB / 100 TB / 350+ TB bands). Only consulted when the user supplies a non-empty `toRegion` / commits a destination.
+Same tiered structure used by EC2 — band widths 10 TB / 40 TB / 100 TB / 150+ TB, **with no free GB band**: the calculator's `datatransfer-calc.json` metered unit map charges outbound from the first GB (verified across all regions on 2026-07-13 — see s3.md's Data Transfer section for the source URL, the exact JSON field, and the published-100-GB/mo-vs-calculator free-tier caveat). Do not pre-subtract a free tier. Only consulted when the user supplies a non-empty `toRegion` / commits a destination.
 
 ## Multipliers / formula
 
@@ -134,7 +134,7 @@ If the user gives a single "messages per month" figure without specifying queue 
 
 ## Verification
 
-- **Capture source:** `/home/fahadmustafa/src/aws-calc/captures/calculator.aws_new.har` entry 346 (POST to `https://dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs`), service key `amazonSimpleQueueService-08629a9d-...`. Saved verbatim to `/tmp/aws_calc_onboard/amazonSimpleQueueService.json`.
+- **Capture source:** `/home/fahadmustafa/src/aws-calc/captures/calculator.aws_new.har` entry 346 (POST to `https://dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs`), service key `amazonSimpleQueueService-08629a9d-...`. Saved verbatim to `/tmp/aws_calc_onboard/amazonSimpleQueueService.json` (path was ephemeral; file lost — re-capture needed).
 - **End-to-end test:** us-east-2, all three queue types at 10M/month, DT in/out 10 TB with empty `fromRegion`/`toRegion`. Captured `serviceCost.monthly` = **$10.00**.
 - **Math reproduces the $10.00 exactly:**
   - Standard: 10M × $0.40/M = **$4.00** (Tier 1, no free-tier deduction applied)

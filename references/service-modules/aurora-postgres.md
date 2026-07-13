@@ -284,7 +284,7 @@ The captured body uses exactly this layout — keep the parenthetical phrasing a
 
 The prior module encoded Reserved Instance pricing as a single packed field `TermType: {"value": "Reserved-1yr-No-Upfront-Standard"}`. The SPA does **not** recognize that string: on "Update estimate" Aurora RI lines recomputed to ~15% of stored (e.g. $2600.26 → $404.61 — instance cost dropped out, only storage/IO survived). The live form splits RI pricing into **three** separate fields inside each `columnFormIPM` row: `TermType: "Reserved"`, `LeaseContractLength: "1yr"` (or `"3yr"`), `PurchaseOption: "No Upfront"` (or `"Partial Upfront"`/`"All Upfront"`). 1yr/No-Upfront Reserved IS offered for provisioned r6g classes (terms 1yr/3yr; payment All/Partial/No Upfront). The three-field shape above is now the verified, recompute-safe encoding. (One-line reminder: the OLD packed-string form recomputes to ~15% of stored.)
 
-Verified against four fragments captured from the LIVE AWS Pricing Calculator SPA (all recompute-safe, all 1yr / No Upfront / Reserved):
+Verified against four fragments captured from the LIVE AWS Pricing Calculator SPA (all recompute-safe, all 1yr / No Upfront / Reserved). The `/tmp/rbm_frags/*.json` paths below were ephemeral (path was ephemeral; file lost — re-capture needed):
 - `/tmp/rbm_frags/31.json` — eu-west-1, 2× `db.r6g.4xlarge` Multi-AZ (`Number of Nodes`=2), 3000 GB, `totalReads_BaseIO`≈129.2211913657119 preserved for ~$75/mo I/O; `serviceCost.monthly` = $2599.87.
 - `/tmp/rbm_frags/56.json` — eu-west-1, 1× `db.r6g.xlarge` Single-AZ, 250 GB; `serviceCost.monthly` = $302.49.
 - `/tmp/rbm_frags/60.json` — eu-west-1, 1× `db.r6g.large`, 100 GB; `serviceCost.monthly` = $148.82.

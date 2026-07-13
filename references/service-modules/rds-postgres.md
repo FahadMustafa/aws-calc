@@ -39,7 +39,7 @@ Single-line-item service with one or more DB instance entries inside a column-fo
           }
         },
         "Deployment Option":  {"value": "Multi-AZ"},                // Single-AZ | Multi-AZ | Multi-AZ (readable standby) | Multi-AZ Cluster
-        "TermType":           {"value": "OnDemand"}                 // OnDemand | Reserved-1yr-No-Upfront-Standard | etc.
+        "TermType":           {"value": "OnDemand"}                 // OnDemand only is verified here — see the Reserved warning below
       }
     ]
   }
@@ -49,6 +49,24 @@ Single-line-item service with one or more DB instance entries inside a column-fo
 The `columnFormIPM.value` is an array — push one entry per distinct (instance type × deployment × term) combination. Use `Number of Nodes` to multiply within a row.
 
 The `"undefined"` key is unfortunate but literal — the SPA's form schema uses it as the column id for utilization. Do not rename.
+
+### Reserved TermType encoding — WARNING (recompute-unsafe pattern; unverified here)
+
+> **Do not emit a Reserved line without recompute-validating it first.** A single packed `TermType` string such as `"Reserved-1yr-No-Upfront-Standard"` (or `-Partial-Upfront-`, `-All-Upfront-`, `-3yr-` variants) is the **exact pattern proven recompute-unsafe** on the shared RDS/Oracle form family. See `rds-sqlserver.md` ("Recompute fragility & combo validation" and the Verification section): three fragments captured from the live calculator.aws SPA confirm that the packed string is unrecognized and the line **silently recomputes to $0.00** on "Update estimate". The sibling `aurora-postgres.md` documents the same packed pattern collapsing Reserved lines to ~15% of stored on recompute. Only `TermType: "OnDemand"` is verified on this Postgres form — On-Demand lines are unaffected by this bug.
+
+**PostgreSQL uses its own form (`estimateFor: "rdsForPostgreSQL"`), not the shared `rdsForOracle` form**, so the packed encoding here is **UNVERIFIED — not proven-broken** (no captured Postgres saveAs exercises Reserved). It is unsafe to assume it works; treat it as likely-broken until proven otherwise.
+
+**Likely-correct alternative (also UNVERIFIED for Postgres).** The recompute-safe encoding that `rds-sqlserver.md` and `aurora-postgres.md` verified on their forms is three separate sibling fields inside the `columnFormIPM` row, not a packed string:
+
+```jsonc
+"TermType":            {"value": "Reserved"},          // OnDemand | Reserved
+"LeaseContractLength": {"value": "1yr"},               // Reserved only: "1yr" | "3yr"
+"PurchaseOption":      {"value": "No Upfront"}         // Reserved only: "No Upfront" | "Partial Upfront" | "All Upfront"
+```
+
+For On-Demand, emit `TermType: "OnDemand"` and **omit** `LeaseContractLength` / `PurchaseOption` entirely (as the verified shape above shows). This three-field shape is the *likely* correct Postgres encoding by analogy to the sibling forms, but it has **not** been captured or recompute-validated on `rdsForPostgreSQL`.
+
+**Instruction: do NOT emit Reserved PostgreSQL lines unless you have recompute-validated the encoding** by driving the live SPA's "Update estimate" click (per `SKILL.md` step 7) or by capturing a fresh HAR with a Reserved Postgres estimate. If you cannot validate, drop to `TermType: "OnDemand"` or refuse the Reserved request — do not guess. On-Demand lines need no such validation.
 
 ## Pricing API filters
 
@@ -140,7 +158,20 @@ Storage amount (<N> GB), Storage volume (<volume display>), Nodes (<N>), Instanc
 | utilization | 100% | Full utilization |
 | TermType | OnDemand | No commitment |
 
+## Verification
+
+**Captured ground truth**: the captured estimate uses `db.m4.2xlarge Multi-AZ` with all add-ons enabled — read it for a working sample shape. The reconciliation of that captured estimate is the basis for the field names and On-Demand shape below.
+
+**Verified** (from the captured On-Demand estimate):
+- Top-level header (`serviceCode`, `estimateFor: "rdsForPostgreSQL"`, `version`, `serviceName`).
+- `calculationComponents` field names, nesting, and value types for the On-Demand shape shown above.
+- The `columnFormIPM` row shape for `TermType: "OnDemand"` (including the literal `"undefined"` utilization key).
+
+**Inferred / NOT yet verified — `verify before relying on this`**:
+- **Reserved `TermType` encoding.** No captured Postgres saveAs exercises a Reserved line. The packed `"Reserved-…"` string is the pattern *proven recompute-unsafe* on the sibling `rdsForOracle` form (`rds-sqlserver.md`) and *proven to collapse to ~15%* on Aurora (`aurora-postgres.md`); the three-field `TermType`/`LeaseContractLength`/`PurchaseOption` alternative is verified on those sibling forms but **not** on `rdsForPostgreSQL`. Recompute-validate via the live SPA "Update" click or a fresh HAR before emitting any Reserved Postgres line (see the Reserved warning above).
+- **Backup over free tier.** No defined retention-days → billable GB-month conversion is captured (see the backup warning under Multipliers). Keep `retentionPeriod: "0"` and treat backup as `$0` until a retention>0 estimate is captured.
+- **Add-on endpoints** (RDS Proxy, Database Insights advanced): rarely-exercised — capture a HAR before claiming high accuracy on their rates.
+
 ## Notes
 
-- The captured estimate uses `db.m4.2xlarge Multi-AZ` with all add-ons enabled — read it for a working sample shape.
 - For other RDS engines (MySQL, MariaDB, Oracle, MS SQL, Aurora variants) the SPA uses a different `serviceCode` per engine. Add a sibling module before pricing those.

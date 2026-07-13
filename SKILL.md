@@ -1,7 +1,8 @@
 ---
 name: aws-calc
-version: "0.8.1"
-description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Looks up real prices via the AWS Price List API, builds the calculator's saveAs JSON shape, posts it to the calculator's public save endpoint, and returns the share URL plus a Markdown line-item breakdown. Use whenever the user wants a calculator.aws shareable estimate, a pricing-calculator link, a sharable AWS cost estimate URL, or asks to translate a workload description into something they can hand off in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Do not use for pure rightsizing-and-Excel-output workflows; route those to aws-pricing instead."
+version: "0.9.0"
+description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Use when the user wants a calculator.aws shareable estimate, a pricing-calculator link, or a sharable AWS cost estimate URL, or to hand off a workload description in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Not for pure rightsizing-and-Excel workflows; route those to aws-pricing instead."
+disable-model-invocation: true
 ---
 
 # aws-calc
@@ -19,11 +20,12 @@ This skill exists because driving the calculator.aws SPA with browser automation
 ## Prerequisites
 
 - `boto3`, `requests` available in the Python environment
-- AWS credentials reachable via the standard boto3 chain. For Fahad's setup, use `--profile zaintech-cloudtools` when invoking the bundled scripts. The Pricing API is a global, low-cost read; any account works.
+- AWS credentials reachable via the standard boto3 chain. When invoking the bundled scripts, pass `--profile <name>` for whatever profile the user names, or omit it to use the default boto3 credential chain; on this machine the default profile for the Pricing API is `zaintech-cloudtools`. The Pricing API is a global, low-cost read; any account works.
 - This skill's directory layout (locate it by globbing for this `SKILL.md`, then resolve siblings):
     - `scripts/pricing_client.py` — Price List API queries (always use this, never write a parallel one)
     - `scripts/create_estimate.py` — POSTs the saveAs body and prints the share URL
     - `scripts/resolve_token.py` — resolves the SPA's opaque cc tokens (e.g. for Amazon MQ) by fetching the public `meteredUnitMaps` catalog; see `references/opaque-tokens.md`
+    - `scripts/check_versions.py` — detects form-version drift between the module-pinned `version` values and the live calculator.aws service definitions (run when a recompute fails as "incompatible with your original inputs")
     - `references/url-spec.md` — endpoint contracts for save / load / share URL
     - `references/body-schema.md` — top-level shape of the saveAs JSON
     - `references/service-modules/` — one file per supported service: `calculationComponents` shape, Pricing API filters, multipliers
@@ -99,7 +101,7 @@ Curl the load endpoint for the new key (`https://d3knqfixx3sbls.cloudfront.net/<
 
 Report: `Saved + load-confirmed: load endpoint returns [N] bytes. (Storage verified; recompute not tested — see step 8 invariant.)`
 
-For services with known-fragile recompute paths (RDS for Oracle / SQL Server — see those modules) or opaque tokens (Bedrock, Amazon MQ), recompute-validate before handing over: drive the live SPA headlessly (Playwright, via the `webapp-testing` skill), open the share URL, click **Update**, and assert no "incompatible with your original inputs" error and that every non-zero-usage line still shows a non-zero cost.
+For services with known-fragile recompute paths (RDS for Oracle / SQL Server — see those modules) or opaque tokens (Bedrock, Amazon MQ), recompute-validate before handing over: drive the live SPA headlessly (Playwright, via the `webapp-testing` skill), open the share URL, click **Update**, and assert no "incompatible with your original inputs" error and that every non-zero-usage line still shows a non-zero cost. If that validation fails with *"This service in your estimate isn't compatible with your original inputs"* (or a recipient reports the same), run `scripts/check_versions.py` first to check for form-version drift between the module-pinned `version` and live calculator.aws — a drifted form is a more likely cause than the cc shape, and the fix is to bump the module version rather than rework the shape.
 </step>
 
 <step n="8" name="Present the result">

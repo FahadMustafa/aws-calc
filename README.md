@@ -1,6 +1,6 @@
 # aws-calc
 
-Generate populated, shareable `https://calculator.aws/#/estimate?id=...` links by calling the calculator's backend directly. Save endpoint is unauthenticated; the SPA recomputes prices from `calculationComponents` on load, so faithful estimates only require the right field shapes plus accurate Pricing API rates.
+Generate populated, shareable `https://calculator.aws/#/estimate?id=...` links by calling the calculator's backend directly. Save endpoint is unauthenticated. On load the SPA displays the **stored** `serviceCost` verbatim — it does not silently recompute; recompute is user-initiated (the recipient clicks **Update**, re-deriving each line from `calculationComponents` against the current Pricing API). So a faithful estimate needs both an accurate stored `serviceCost` (the default display) and a recompute-safe `calculationComponents` shape, and the two must agree. See SKILL.md's operating note "On what the recipient actually sees".
 
 This repo is the source of truth for the **aws-calc** Claude skill. The deployed copy at `~/.claude/skills/aws-calc/` is a mirror; deploy with `./deploy.sh`.
 
@@ -10,7 +10,7 @@ This repo is the source of truth for the **aws-calc** Claude skill. The deployed
 - `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL).
 - `references/`
   - `body-schema.md`, `url-spec.md`, `service-codes.md` — top-level conventions.
-  - `service-modules/` — one file per supported service (33 services as of v0.2.0). `_template.md` is the extension recipe.
+  - `service-modules/` — one file per supported service (42 services as of v0.8.x; see `references/service-codes.md` for the current index). `_template.md` is the extension recipe.
 - `poc/` — minimal standalone Python replay (input JSON → share URL).
 - `captures/` — gitignored. HAR captures + extracted bundle/config used to derive `calculationComponents` shapes. `extract_saveas.py` streams a HAR and emits per-service saveAs bodies under `captures/saveAs/per-service/`.
 - `findings.md`, `notes.md` — original discovery write-up.

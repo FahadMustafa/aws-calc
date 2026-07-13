@@ -87,18 +87,18 @@ Use `get-attribute-values --service-code AWSSecurityHub --attribute productFamil
 The calculator treats `noOfSecurityChecks`, `noOfIngestion`, `noOfautomationrules`, and `noOfcriteria` as **per-account** quantities, then scales by `noOfAccounts`. Automation evaluations expand as `rules × criteria` per account.
 
 ```
-checks_total       = noOfAccounts * noOfSecurityChecks
-ingestion_total    = noOfAccounts * noOfIngestion
-evaluations_total  = noOfAccounts * noOfautomationrules * noOfcriteria
+# Per-account quantities (before scaling by noOfAccounts):
+checks_per_account      = noOfSecurityChecks
+ingestion_per_account   = noOfIngestion
+evaluations_per_account = noOfautomationrules * noOfcriteria
 
-# Free tiers are per-account, applied before multiplying:
-checks_paid        = noOfAccounts * max(0, noOfSecurityChecks)             # no free tier on standards
-ingestion_paid     = noOfAccounts * max(0, noOfIngestion - 10000)
-evaluations_paid   = noOfAccounts * max(0, (noOfautomationrules * noOfcriteria) - 1000000)
-
-monthly_checks     = tier_walk(checks_paid       across standards tiers)
-monthly_ingestion  = tier_walk(ingestion_paid    across findings tiers)
-monthly_automation = tier_walk(evaluations_paid  across automation tiers)
+# Tiers are PER ACCOUNT PER REGION, so tier-walk each account's quantity FIRST,
+# then multiply by noOfAccounts (identical inputs across accounts in this cc shape).
+# Walking the aggregate would misapply the volume bands; at the captured scale
+# (10 accounts, quantities inside the first band) both orders coincide.
+monthly_checks     = noOfAccounts * tier_walk(checks_per_account      across standards tiers)
+monthly_ingestion  = noOfAccounts * tier_walk(ingestion_per_account   across findings tiers)
+monthly_automation = noOfAccounts * tier_walk(evaluations_per_account across automation tiers)
 
 serviceCost.monthly = monthly_checks + monthly_ingestion + monthly_automation
 serviceCost.upfront = 0
@@ -128,9 +128,9 @@ Number of accounts (<N>), Number of security checks per account per month (<N>),
 
 Reproduced the captured $0.10 monthly cost in `us-east-2` with all five fields = "10":
 
-- checks: 10 accounts × 10 checks = 100 paid checks × $0.001 = **$0.10**
-- ingestion: 10 × 10 = 100 events / account → all under the 10,000 free tier = **$0.00**
-- automation: 10 × 10 × 10 = 1,000 evaluations / account → all under the 1,000,000 free tier = **$0.00**
+- checks: 10 checks/account × $0.001 (first band) = $0.01/account × 10 accounts = **$0.10**
+- ingestion: 10 events/account → under the 10,000 free tier = $0.00/account × 10 = **$0.00**
+- automation: 10 × 10 = 100 evaluations/account → under the 1,000,000 free tier = $0.00/account × 10 = **$0.00**
 
 Total: **$0.10**, matches the captured `serviceCost.monthly` exactly.
 

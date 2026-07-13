@@ -6,5 +6,10 @@
 
 # Recon captures: large (HAR can be 100+ MB) and may contain session IDs / analytics tokens.
 # Keep them locally for re-running analysis; do not push.
-captures/
+# Note: ignore captures/* (contents) rather than captures/ (the dir) so specific
+# subtrees can be re-included below. Re-inclusion is impossible if the parent dir
+# itself is ignored via a trailing-slash rule.
+captures/*
+# Rescued ground-truth fragments belong in the repo (small, sanitized).
+!captures/rescued/
 __pycache__/

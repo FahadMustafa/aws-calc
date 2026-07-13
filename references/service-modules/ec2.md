@@ -21,7 +21,7 @@ Covers EC2 compute, EBS storage, snapshots, monitoring, and EC2 data transfer in
 ```jsonc
 {
   "tenancy":           {"value": "shared"},                        // shared | dedicatedInstance | dedicatedHost
-  "selectedOS":        {"value": "linux"},                         // linux | windows | rhel | sles
+  "selectedOS":        {"value": "linux"},                         // linux | windows | rhel | suse  (NOT "sles" — an unrecognized token silently reprices the line as Linux on recompute; "suse" verified live 2026-06-11, renders "SUSE Linux Enterprise Server" and prices SUSE RI/OD correctly)
   "workloadSelection": {"value": "consistent"},                    // consistent | dailySpike | weeklySpike | monthlySpike
   "workload": {                                                    // count of instances + workload pattern
     "value": {
@@ -66,7 +66,7 @@ Covers EC2 compute, EBS storage, snapshots, monitoring, and EC2 data transfer in
 | Standard RI 3Y Partial Upfront | `{selectedOption: "standard", term: "3 Year", upfrontPayment: "Partial", model: "standard"}` |
 | Convertible RI 1Y/3Y | replace `model: "convertible"`; same `upfrontPayment` options |
 
-For Compute Savings Plans and EC2 Instance Savings Plans the `pricingStrategy.value.selectedOption` is `"compute-savings-plans"` or `"ec2-instance-savings-plans"` with additional `term` / `upfrontPayment` keys. Capture a HAR before promising those — fields haven't been validated end-to-end here.
+For Compute Savings Plans and EC2 Instance Savings Plans the `pricingStrategy.value.selectedOption` is `"compute-savings-plans"` or `"ec2-instance-savings-plans"` with additional `term` / `upfrontPayment` keys. **These SP field shapes are inferred, not captured — verify before relying on this — do not emit SP lines without recompute-validating** (capture a saveAs body / HAR and confirm the estimate survives "Update estimate").
 
 ## Pricing API filters
 
@@ -160,9 +160,11 @@ Multiply intra-region GB by `2 × intra_region_per_gb`. INBOUND is free.
 ## Multipliers / formula
 
 ```
-# Compute. On-Demand ALWAYS bills 730 hrs — do NOT scale by utilization.
-# utilizationValue is an RI/Savings-Plan break-even input, not an On-Demand hours scaler.
-monthly_compute  = on_demand_hourly * 730 * count                     # On-Demand
+# Compute. On-Demand DOES scale by utilizationValue (live-SPA verified 2026-06-12:
+# m5.xlarge Windows me-south-1 at utilizationValue "2.19" recomputed to $6.70 = rate*730*0.0219,
+# survived "Update estimate" unchanged). An earlier note here claimed no scaling — wrong;
+# that capture used 100% which cannot distinguish the behaviours.
+monthly_compute  = on_demand_hourly * 730 * (utilization_pct/100) * count   # On-Demand
 # For RI/SP, use the committed hourly (Hrs dimension) * 730 * count; the utilization %
 # only affects the break-even comparison the SPA renders, not the recurring charge.
 
@@ -219,3 +221,33 @@ Tenancy (Shared Instances), Operating system (<OS display>), Workload (Consisten
 ## Captured working example
 
 `/home/fahadmustafa/src/aws-calc/poc/sample_input.json` (from `aws-calc` repo) holds two ec2Enhancement entries — one OnDemand t3.small Windows + 500 GB gp3, one Standard RI 3yr No Upfront r5.large Linux + 100 GB gp3. Both verified to round-trip.
+
+## Verification
+
+### Ground-truth sources found on disk
+
+- `poc/sample_input.json` — the primary ground truth. Contains **two full `ec2Enhancement` line items with `serviceCost`**, both `estimateFor: "template"`, `version: "0.0.68"`, region `us-east-2`:
+  - **t3.small, Windows, On-Demand 100% util, 500 GB gp3, snapshotFrequency 30, no DT** → `serviceCost.monthly 68.62`, `upfront 0`.
+  - **r5.large, Linux, Standard RI 3yr No Upfront, 100 GB gp3, snapshotFrequency 0, no DT** → `serviceCost.monthly 47.42`, `upfront 0`.
+- `captures/calculator.aws.har`, `captures/calculator.aws_new.har`, `captures/calculator.aws_new_2.har` — raw HAR captures that contain the `ec2Enhancement` request body (source the poc was extracted from). No standalone per-service EC2 extract was produced under `captures/saveAs*/per-service/`.
+- `captures/saveAs/per-service/amazonElasticBlockStore.json` — **NOT** an EC2 line item. It is the separate `amazonElasticBlockStore` service (`serviceCode: "amazonElasticBlockStore"`, `estimateFor: "elasticBlockStore"`), so it is not ground truth for `ec2Enhancement`. It only corroborates the incremental-snapshot model indirectly (that module bills a distinct "amount changed per snapshot", not full-volume × count).
+
+### Live-SPA verified (do not regress these)
+
+- **Utilization scaling on On-Demand — verified 2026-06-12.** m5.xlarge Windows me-south-1 at `utilizationValue "2.19"` recomputed to $6.70 = `rate × 730 × 0.0219`, and survived "Update estimate" unchanged. This overturned an earlier (wrong) note that claimed On-Demand does not scale by utilization. See the formula block comment.
+- **`selectedOS: "suse"` token — verified 2026-06-11.** Renders "SUSE Linux Enterprise Server" and prices SUSE RI/OD correctly. `"sles"` is NOT accepted — an unrecognized token silently reprices the line as Linux on recompute.
+
+### Reconciliation status
+
+**Not yet done — cannot be completed from disk.** The module's formula needs a per-instance on-demand hourly rate, a gp3 per-GB-month rate, and (for the RI line) the committed Hrs rate. None of those numeric rates are on disk: there is no Pricing API cache, and the module quotes only approximate *surcharge* rates ($0.005/IOPS-mo, $0.04/MBps-mo, $0.01/GB cross-AZ) that do not apply to either captured example (neither line provisions extra IOPS/throughput or any data transfer). The Pricing API was not called (no AWS credentials assumed).
+
+What *is* an on-disk consistency observation (not an arithmetic reconciliation): the t3.small line carries `snapshotFrequency: 30` yet its $68.62 is consistent with compute + 500 GB gp3 and ~$0 snapshot — evidence the SPA's snapshot model is incremental, not `GB × count`. The exact compute/EBS split is asserted, not verified against rates, because the rates are not on disk.
+
+### Inferred — verify before relying on this
+
+- **Savings Plans fields** (`selectedOption: "compute-savings-plans"` / `"ec2-instance-savings-plans"` and their `term`/`upfrontPayment` keys): admitted not validated end-to-end. **Verify before relying on this — do not emit SP lines without recompute-validating.**
+- **Reserved Instance pricingStrategy rows** other than Standard 3yr No Upfront: only that one RI variant appears in a capture (the r5.large line). Every other row in the "Pricing strategy values" table — Standard 1Y (All/None/Partial), Standard 3Y (All/Partial), and all Convertible variants — is an inferred field shape. Verify before relying on this.
+- **`selectedOS: "rhel"`**: inferred; not present in any capture. (`linux` and `windows` are both evidenced by the poc lines; `suse` is live-SPA verified above.)
+- **Data-transfer arithmetic** (tiered outbound 10/40/100/350 TB bands; cross-AZ intra-region billed 2×): inferred from Pricing API structure / behavior, not from a captured recompute. The poc DT arrays are all empty, so the field *shape* is captured but the multipliers are unverified. Verify before relying on this.
+- **gp3 provisioned IOPS / throughput surcharges** and their ~rates: inferred; no capture provisions beyond baseline. Verify before relying on this.
+- **Snapshot incremental formula** (`retained_snapshot_gb ≈ storage_gb + (snaps-1) × change_fraction × storage_gb`): consistent with the poc's ~$0 snapshot on the t3.small line, but the change-fraction model itself is an inference/assumption — flag the assumption when emitting snapshots.

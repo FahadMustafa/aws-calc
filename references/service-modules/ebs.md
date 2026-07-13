@@ -396,7 +396,7 @@ snapshotFrequency), list it in the breakdown so the user can correct.
 
 - **Ground truth**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonElasticBlockStore.json`
   — captured saveAs POST body from the calculator.aws SPA.
-- **Snapshot-shape ground truth (live-SPA, recompute-safe)**:
+- **Snapshot-shape ground truth (live-SPA, recompute-safe)** — the `/tmp/rbm_frags/*.json` paths below were ephemeral (path was ephemeral; file lost — re-capture needed):
   - `/tmp/rbm_frags/51.json` — eu-west-1 EBS snapshot storage,
     `snapshotAmount` 18083, `serviceCost.monthly` $452.24.
   - `/tmp/rbm_frags/88.json` — eu-central-1 DRS staging snapshots,
