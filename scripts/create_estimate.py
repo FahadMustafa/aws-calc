@@ -4,7 +4,8 @@
 Reads a JSON file containing the saveAs request body, POSTs it to the public
 unauthenticated calculator.aws save endpoint, and prints the share URL.
 
-Usage: python create_estimate.py [path/to/input.json]   (default: sample_input.json)
+Usage: python create_estimate.py [path/to/input.json]
+       (default: references/examples/sample-saveas-body.json)
 Exit 0 on success, non-zero on failure.
 """
 import json
@@ -85,7 +86,8 @@ def create_estimate(body: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
-    path = Path(argv[1]) if len(argv) > 1 else Path(__file__).parent / "sample_input.json"
+    default = Path(__file__).resolve().parent.parent / "references" / "examples" / "sample-saveas-body.json"
+    path = Path(argv[1]) if len(argv) > 1 else default
     body = json.loads(path.read_text())
     saved_key = create_estimate(body)
     print(SHARE_URL.format(saved_key))

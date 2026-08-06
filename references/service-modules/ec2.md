@@ -194,7 +194,7 @@ serviceCost.upfront = (RI all/partial-upfront upfront amount * count) if applica
 
 For RI 1yr All Upfront the upfront charge is the entire term cost; the hourly Hrs rate is 0. For Partial Upfront, both pieces are non-zero. For No Upfront, the upfront is 0 and Hrs carries the full rate.
 
-**The shipped `poc/sample_input.json` does not apply the old snapshot formula** (its t3.small line has `snapshotFrequency: 30` yet `serviceCost.monthly $68.62` ≈ compute + 500 GB gp3 only, with ~$0 snapshot). That is the correct behavior — the SPA's snapshot model is incremental, not `GB × count`.
+**The shipped `references/examples/sample-saveas-body.json` does not apply the old snapshot formula** (its t3.small line has `snapshotFrequency: 30` yet `serviceCost.monthly $68.62` ≈ compute + 500 GB gp3 only, with ~$0 snapshot). That is the correct behavior — the SPA's snapshot model is incremental, not `GB × count`.
 
 ## configSummary template
 
@@ -220,16 +220,16 @@ Tenancy (Shared Instances), Operating system (<OS display>), Workload (Consisten
 
 ## Captured working example
 
-`poc/sample_input.json` (from `aws-calc` repo) holds two ec2Enhancement entries — one OnDemand t3.small Windows + 500 GB gp3, one Standard RI 3yr No Upfront r5.large Linux + 100 GB gp3. Both verified to round-trip.
+`references/examples/sample-saveas-body.json` (from `aws-calc` repo) holds two ec2Enhancement entries — one OnDemand t3.small Windows + 500 GB gp3, one Standard RI 3yr No Upfront r5.large Linux + 100 GB gp3. Both verified to round-trip.
 
 ## Verification
 
 ### Ground-truth sources found on disk
 
-- `poc/sample_input.json` — the primary ground truth. Contains **two full `ec2Enhancement` line items with `serviceCost`**, both `estimateFor: "template"`, `version: "0.0.68"`, region `us-east-2`:
+- `references/examples/sample-saveas-body.json` — the primary ground truth. Contains **two full `ec2Enhancement` line items with `serviceCost`**, both `estimateFor: "template"`, `version: "0.0.68"`, region `us-east-2`:
   - **t3.small, Windows, On-Demand 100% util, 500 GB gp3, snapshotFrequency 30, no DT** → `serviceCost.monthly 68.62`, `upfront 0`.
   - **r5.large, Linux, Standard RI 3yr No Upfront, 100 GB gp3, snapshotFrequency 0, no DT** → `serviceCost.monthly 47.42`, `upfront 0`.
-- `captures/calculator.aws.har`, `captures/calculator.aws_new.har`, `captures/calculator.aws_new_2.har` — raw HAR captures that contain the `ec2Enhancement` request body (source the poc was extracted from). No standalone per-service EC2 extract was produced under `captures/saveAs*/per-service/`.
+- `captures/calculator.aws.har`, `captures/calculator.aws_new.har`, `captures/calculator.aws_new_2.har` — raw HAR captures that contain the `ec2Enhancement` request body (source the sample body was extracted from). No standalone per-service EC2 extract was produced under `captures/saveAs*/per-service/`.
 - `captures/saveAs/per-service/amazonElasticBlockStore.json` — **NOT** an EC2 line item. It is the separate `amazonElasticBlockStore` service (`serviceCode: "amazonElasticBlockStore"`, `estimateFor: "elasticBlockStore"`), so it is not ground truth for `ec2Enhancement`. It only corroborates the incremental-snapshot model indirectly (that module bills a distinct "amount changed per snapshot", not full-volume × count).
 
 ### Live-SPA verified (do not regress these)
@@ -247,7 +247,7 @@ What *is* an on-disk consistency observation (not an arithmetic reconciliation):
 
 - **Savings Plans fields** (`selectedOption: "compute-savings-plans"` / `"ec2-instance-savings-plans"` and their `term`/`upfrontPayment` keys): admitted not validated end-to-end. **Verify before relying on this — do not emit SP lines without recompute-validating.**
 - **Reserved Instance pricingStrategy rows** other than Standard 3yr No Upfront: only that one RI variant appears in a capture (the r5.large line). Every other row in the "Pricing strategy values" table — Standard 1Y (All/None/Partial), Standard 3Y (All/Partial), and all Convertible variants — is an inferred field shape. Verify before relying on this.
-- **`selectedOS: "rhel"`**: inferred; not present in any capture. (`linux` and `windows` are both evidenced by the poc lines; `suse` is live-SPA verified above.)
-- **Data-transfer arithmetic** (tiered outbound 10/40/100/350 TB bands; cross-AZ intra-region billed 2×): inferred from Pricing API structure / behavior, not from a captured recompute. The poc DT arrays are all empty, so the field *shape* is captured but the multipliers are unverified. Verify before relying on this.
+- **`selectedOS: "rhel"`**: inferred; not present in any capture. (`linux` and `windows` are both evidenced by the sample-body lines; `suse` is live-SPA verified above.)
+- **Data-transfer arithmetic** (tiered outbound 10/40/100/350 TB bands; cross-AZ intra-region billed 2×): inferred from Pricing API structure / behavior, not from a captured recompute. The sample body's DT arrays are all empty, so the field *shape* is captured but the multipliers are unverified. Verify before relying on this.
 - **gp3 provisioned IOPS / throughput surcharges** and their ~rates: inferred; no capture provisions beyond baseline. Verify before relying on this.
-- **Snapshot incremental formula** (`retained_snapshot_gb ≈ storage_gb + (snaps-1) × change_fraction × storage_gb`): consistent with the poc's ~$0 snapshot on the t3.small line, but the change-fraction model itself is an inference/assumption — flag the assumption when emitting snapshots.
+- **Snapshot incremental formula** (`retained_snapshot_gb ≈ storage_gb + (snaps-1) × change_fraction × storage_gb`): consistent with the sample body's ~$0 snapshot on the t3.small line, but the change-fraction model itself is an inference/assumption — flag the assumption when emitting snapshots.

@@ -64,7 +64,7 @@ Top-level body shape:
 
 `serviceCode` values seen in the captured estimate: `ec2Enhancement`, `amazonRDSPostgreSQLDB`, `amazonSimpleStorageServiceGroup`, `amazonVirtualPrivateCloud`. Group-style services (S3, VPC) use a `subServices` array with one mini line item per sub-feature; flat services put their inputs directly under `calculationComponents`.
 
-The full captured body is preserved verbatim at `poc/sample_input.json` (365 lines, 4 services).
+The full captured body is preserved verbatim at `references/examples/sample-saveas-body.json` (365 lines, 4 services).
 
 ### Critical observation: pricing is computed client-side
 
@@ -104,9 +104,8 @@ https://calculator.aws/#/estimate?id=<savedKey>
 ## Reproduction
 
 ```bash
-cd poc
-pip install -r requirements.txt          # only `requests`
-python create_estimate.py sample_input.json
+pip install requests
+python scripts/create_estimate.py references/examples/sample-saveas-body.json
 # → prints https://calculator.aws/#/estimate?id=<40hex>
 ```
 
@@ -116,7 +115,7 @@ Or with bare curl using the captured body verbatim:
 curl -s -X POST https://dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs \
   -H 'Content-Type: application/json' \
   -H 'Origin: https://calculator.aws' \
-  --data @poc/sample_input.json | jq -r '.body' | jq -r '.savedKey'
+  --data @references/examples/sample-saveas-body.json | jq -r '.body' | jq -r '.savedKey'
 ```
 
 ## Verification log
