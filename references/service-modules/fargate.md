@@ -146,7 +146,7 @@ Fargate-supported vCPU/memory combinations are constrained (e.g. 0.25 vCPU → 0
 
 ## Verification
 
-- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2`: see `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/awsFargate.json`.
+- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2`: see `captures/saveAs/per-service/awsFargate.json`.
 - Pricing API rates verified via `pricing_client.py get-products --service-code AmazonECS --filter regionCode=us-east-2 --filter usagetype=...` against the live API.
 - Captured math reproduction (Linux x86, us-east-2, 1 task/day × 1 min × 1 vCPU × 8 GB × 20 GB storage):
   - task_hours_per_month = 1 × 30.4167 × (1/60) = 0.50694 hr

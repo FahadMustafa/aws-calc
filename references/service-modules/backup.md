@@ -287,7 +287,7 @@ The percentage fields were corrected from **fractions to literal percents** afte
 
 ## Verification
 
-- **Captured HAR / saveAs body**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/awsBackup.json` — region us-east-2, 16 sub-services, group `serviceCost.monthly: 10.47`. All `serviceCode` / `estimateFor` / `version` triples in the catalog table above come from this file.
+- **Captured HAR / saveAs body**: `captures/saveAs/per-service/awsBackup.json` — region us-east-2, 16 sub-services, group `serviceCost.monthly: 10.47`. All `serviceCode` / `estimateFor` / `version` triples in the catalog table above come from this file.
 - **Round-trip tested**: Not end-to-end. Header values and shape are verbatim from a real captured save, so the SPA load is expected to accept them, but the formula for `serviceCost.monthly` is approximated (the SPA recomputes it from `calculationComponents` on load, so the seed value is informational only).
 - **Pricing API verified for**: EFS warm/cold ($0.05 / $0.01 GB-mo us-east-2), DDB warm/cold ($0.10 / $0.03), SAP HANA warm ($0.06), Timestream warm/cold ($0.10 / $0.03), S3 BackupVault (verified present), VMware (restore SKU verified).
 - **Marked "verify before relying on this"** (do not invent rates for these without falling back to the source service's own snapshot/backup SKU and flagging it in the breakdown):

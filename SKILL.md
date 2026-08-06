@@ -20,7 +20,7 @@ This skill exists because driving the calculator.aws SPA with browser automation
 ## Prerequisites
 
 - `boto3`, `requests` available in the Python environment
-- AWS credentials reachable via the standard boto3 chain. When invoking the bundled scripts, pass `--profile <name>` for whatever profile the user names, or omit it to use the default boto3 credential chain; on this machine the default profile for the Pricing API is `zaintech-cloudtools`. The Pricing API is a global, low-cost read; any account works.
+- AWS credentials reachable via the standard boto3 chain. When invoking the bundled scripts, pass `--profile <name>` for whatever profile the user names, or omit it to use the default boto3 credential chain. The Pricing API is a global, low-cost read; any account works.
 - This skill's directory layout (locate it by globbing for this `SKILL.md`, then resolve siblings):
     - `scripts/pricing_client.py` — Price List API queries (always use this, never write a parallel one)
     - `scripts/create_estimate.py` — POSTs the saveAs body and prints the share URL
@@ -59,7 +59,7 @@ Do not skip this — modules carry hard-won shape details that you cannot recons
 </step>
 
 <step n="3" name="Look up rates via the Pricing API">
-Run `scripts/pricing_client.py get-products` for each line item using the filters specified in its service module. Pass `--profile zaintech-cloudtools` (or whichever profile the user named). For tiered services like S3 the response will contain multiple priceDimensions per SKU, each with `begin_range`/`end_range` — keep the full set so the line-item math can pick the right tier per usage band.
+Run `scripts/pricing_client.py get-products` for each line item using the filters specified in its service module. Pass `--profile <your-profile>` (or whichever profile the user named). For tiered services like S3 the response will contain multiple priceDimensions per SKU, each with `begin_range`/`end_range` — keep the full set so the line-item math can pick the right tier per usage band.
 
 If a specific filter combination returns zero SKUs, fall back per the module's guidance (e.g. RDS often has missing RI prices) and note the fallback in the breakdown.
 

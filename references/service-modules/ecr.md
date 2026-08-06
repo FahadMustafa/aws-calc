@@ -137,7 +137,7 @@ If the user mentions "pulling images to ECS / EKS in the same region", outbound 
 
 ## Verification
 
-- Shape captured from a working saveAs body in `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonElasticContainerRegistry.json` for `us-east-2`.
+- Shape captured from a working saveAs body in `captures/saveAs/per-service/amazonElasticContainerRegistry.json` for `us-east-2`.
 - Pricing API filters above verified via `pricing_client.py get-products` against the live API on 2026-05-11: `AmazonECR` returns `$0.10 per GB-month` for `USE2-TimedStorage-ByteHrs`; `AWSDataTransfer` with `transferType=AWS Outbound` from `US East (Ohio)` returns the four-tier table above.
 - End-to-end formula reproduces the captured `serviceCost.monthly` of **$922.60 exactly** ($1.00 storage + $921.60 outbound DT, no free-tier deduction).
 - Cross-region outbound (`toRegion=<region-code>`) is **inferred** from analogous EC2/S3 DT forms — not yet captured for ECR. Verify before relying on it.

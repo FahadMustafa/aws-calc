@@ -312,8 +312,8 @@ Reproduced the captured `group.serviceCost.monthly = $216.04` exactly in `us-eas
 
 **Ground truth files**:
 
-- Captured saveAs body: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/awsElasticDisasterRecovery.json`
-- Service template (en_US definition with the SPA's verbatim math operations): extracted from `/home/fahadmustafa/src/aws-calc/captures/calculator.aws_new_2.har`, response for `https://d1qsjq9pzbk1k6.cloudfront.net/data/awsDrsRecoveryReplication/en_US.json` (version `0.0.37`)
+- Captured saveAs body: `captures/saveAs/per-service/awsElasticDisasterRecovery.json`
+- Service template (en_US definition with the SPA's verbatim math operations): extracted from `captures/calculator.aws_new_2.har`, response for `https://d1qsjq9pzbk1k6.cloudfront.net/data/awsDrsRecoveryReplication/en_US.json` (version `0.0.37`)
 - DRS replication rate verified via `pricing_client.py get-products --service-code AWSElasticDisasterRecovery --filter regionCode=us-east-2 --filter usagetype=USE2-DRS-Replication` on the date this module was authored
 - EBS gp3 / sc1 / Magnetic / Snapshot rates verified via the corresponding `AmazonEC2` `get-products` queries
 

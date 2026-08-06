@@ -222,9 +222,9 @@ When the user is silent, use **classic On-Demand with 10 rec/s × 10 KB, 1-day r
 
 ## Verification
 
-- Source: `/home/fahadmustafa/src/aws-calc/captures/calculator.aws_new.har` (the `POST /Prod/v2/saveAs` body holds all three line items).
+- Source: `captures/calculator.aws_new.har` (the `POST /Prod/v2/saveAs` body holds all three line items).
 - Region tested end-to-end: `us-east-2` / `US East (Ohio)`.
-- Reproduced monthlies (rates pulled live via `pricing_client.py --profile zaintech-cloudtools`, ServiceCode `AmazonKinesis`):
+- Reproduced monthlies (rates pulled live via `pricing_client.py --profile <your-profile>`, ServiceCode `AmazonKinesis`):
   - Provisioned: **$273.85** captured → computed $273.85 with `shards = ceil(1 × 1.2) = 2`, 10 EFO consumers × 2 shards × 730 hr × $0.015 + 10 × 250.63 GB × $0.013 + 2 × 730 × $0.015 + 26.28 M PU × $1.4e-8.
   - On-Demand classic: **$274.81** captured → computed $274.81 = 730 × $0.04 + 250.63 × $0.08 + 10 × 250.63 × $0.04 + 10 × 250.63 × $0.05.
   - On-Demand Advantage: **$3079.73** captured → computed $3079.69 (≤0.05 rounding drift) = max(0.586, 25) MB/s × 2,628,000 s ÷ 1024 GB × $0.032 + max(1.172, 25) MB/s × 2,628,000 s ÷ 1024 GB × $0.016.

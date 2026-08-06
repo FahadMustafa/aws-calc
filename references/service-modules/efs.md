@@ -16,7 +16,7 @@ Covers Amazon Elastic File System: Standard storage plus Infrequent Access and A
 }
 ```
 
-Values pulled from `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonEFS.json`.
+Values pulled from `captures/saveAs/per-service/amazonEFS.json`.
 
 ## calculationComponents (verified shape)
 
@@ -217,7 +217,7 @@ When a quantity field defaults to `0`, set `value: "0"` (string) and keep the `u
 
 ## Verification
 
-- Ground truth: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonEFS.json` (extracted from `/home/fahadmustafa/src/aws-calc/captures/calculator.aws.har` / `_new.har` / `_new_2.har` via `extract_saveas.py`).
+- Ground truth: `captures/saveAs/per-service/amazonEFS.json` (extracted from `captures/calculator.aws.har` / `_new.har` / `_new_2.har` via `extract_saveas.py`).
 - Verified end-to-end: Regional (multi-AZ) EFS, Elastic Throughput, us-east-2, 100 GB total with 10 GB / 10% IA + 10 GB / 10% Archive lifecycle, 10 GB ET read + 10 GB ET write per month — round-trips with `serviceCost.monthly = 25.94`.
 - Pricing API SKU coverage confirmed for us-east-2: Standard ($0.30/GB-Mo), IA-ET ($0.016/GB-Mo), Archive ($0.008/GB-Mo), IA read/write ($0.01/GB), Archive read/write ($0.03/GB), ET read ($0.03/GB), ET write ($0.06/GB), Provisioned Throughput ($6.00/MiBps-Mo).
 

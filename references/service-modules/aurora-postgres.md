@@ -292,7 +292,7 @@ Verified against four fragments captured from the LIVE AWS Pricing Calculator SP
 
 Note on I/O: idx31 preserves `totalReads_BaseIO` ≈ 129.22 (per second) which the SPA prices at ~$75/mo. Keep real captured IO values verbatim — do not reset them to the `"1"` placeholder when a fragment carries a measured rate.
 
-- **Ground-truth HAR file**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonRDSAuroraPostgreSQLCompatibleDB.json` — provisioned `db.r6g.large` Aurora Standard in `us-east-2`, single node, 100% utilization, 100 GB cluster storage, 100 GB additional backup, 100 GB/month snapshot export, RDS Proxy on, Database Insights Advanced on, Aurora Extended Support on (year1+2), IO placeholders at `1/sec`. captured `serviceCost.monthly` = $243.58, `upfront` = $0.
+- **Ground-truth HAR file**: `captures/saveAs/per-service/amazonRDSAuroraPostgreSQLCompatibleDB.json` — provisioned `db.r6g.large` Aurora Standard in `us-east-2`, single node, 100% utilization, 100 GB cluster storage, 100 GB additional backup, 100 GB/month snapshot export, RDS Proxy on, Database Insights Advanced on, Aurora Extended Support on (year1+2), IO placeholders at `1/sec`. captured `serviceCost.monthly` = $243.58, `upfront` = $0.
 - **Verified end-to-end** (captures are real working POSTs): provisioned-instance shape, Aurora Standard edition, both OnDemand and the 3-field Reserved pricing strategy, cluster storage field, backup-storage and snapshot-export fields, all three add-on flags, the `"undefined"` utilization key, the preserved measured-IO value, and the configSummary phrasing.
 - **Verify before relying on this**:
   - Aurora Serverless v2 / Limitless row shape (min/max ACU field names not captured)

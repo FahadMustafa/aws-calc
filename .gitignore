@@ -13,3 +13,6 @@ captures/*
 # Rescued ground-truth fragments belong in the repo (small, sanitized).
 !captures/rescued/
 __pycache__/
+
+# Beads issue tracker: local Dolt-backed working data (contains owner emails / machine paths)
+.beads/

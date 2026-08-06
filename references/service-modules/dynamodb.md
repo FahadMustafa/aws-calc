@@ -461,8 +461,8 @@ Apply when the user is silent. Always emit only the sub-services the user actual
 
 ## Verification
 
-- **Source capture**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonDynamoDb.json` — a full DynamoDB line item with all 8 sub-services in `us-east-2`, parent `serviceCost = {"monthly": 604.47, "upfront": 180}`.
-- **Region tested end-to-end**: `us-east-2` / `US East (Ohio)`. Rates pulled live via `pricing_client.py --profile zaintech-cloudtools`, service-codes `AmazonDynamoDB` and `AmazonDAX`.
+- **Source capture**: `captures/saveAs/per-service/amazonDynamoDb.json` — a full DynamoDB line item with all 8 sub-services in `us-east-2`, parent `serviceCost = {"monthly": 604.47, "upfront": 180}`.
+- **Region tested end-to-end**: `us-east-2` / `US East (Ohio)`. Rates pulled live via `pricing_client.py --profile <your-profile>`, service-codes `AmazonDynamoDB` and `AmazonDAX`.
 - **Reproduced sub-service monthlies** (against the capture):
   - `dynamoDBDaxNodes`: captured `$558.45` → 3 × 730 × $0.255 = `$558.45`. Exact.
   - `dynamoDBOnBackup`: captured `$4.50` → 10×$0.10 + 10×$0.20 + 10×$0.15 = `$4.50`. Exact.

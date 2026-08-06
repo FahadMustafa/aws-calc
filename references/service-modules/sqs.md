@@ -134,7 +134,7 @@ If the user gives a single "messages per month" figure without specifying queue 
 
 ## Verification
 
-- **Capture source:** `/home/fahadmustafa/src/aws-calc/captures/calculator.aws_new.har` entry 346 (POST to `https://dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs`), service key `amazonSimpleQueueService-08629a9d-...`. Saved verbatim to `/tmp/aws_calc_onboard/amazonSimpleQueueService.json` (path was ephemeral; file lost — re-capture needed).
+- **Capture source:** `captures/calculator.aws_new.har` entry 346 (POST to `https://dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs`), service key `amazonSimpleQueueService-08629a9d-...`. Saved verbatim to `/tmp/aws_calc_onboard/amazonSimpleQueueService.json` (path was ephemeral; file lost — re-capture needed).
 - **End-to-end test:** us-east-2, all three queue types at 10M/month, DT in/out 10 TB with empty `fromRegion`/`toRegion`. Captured `serviceCost.monthly` = **$10.00**.
 - **Math reproduces the $10.00 exactly:**
   - Standard: 10M × $0.40/M = **$4.00** (Tier 1, no free-tier deduction applied)

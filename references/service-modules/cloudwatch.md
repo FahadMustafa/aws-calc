@@ -331,8 +331,8 @@ If the user gives a brief like "enable CloudWatch monitoring for our 20 EC2 inst
 
 ## Verification
 
-- Source: captured saveAs body at `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonCloudWatch.json` (region `us-east-2`, every dimension exercised at value `"10"` except mobile events at `"70"` and mobile sampling at `"100"`). The captured `serviceCost.monthly` is **$222.05**.
-- Rate SKUs above pulled live via `pricing_client.py --profile zaintech-cloudtools get-products --service-code AmazonCloudWatch --filter regionCode=us-east-2 …` against the listed `usagetype` values.
+- Source: captured saveAs body at `captures/saveAs/per-service/amazonCloudWatch.json` (region `us-east-2`, every dimension exercised at value `"10"` except mobile events at `"70"` and mobile sampling at `"100"`). The captured `serviceCost.monthly` is **$222.05**.
+- Rate SKUs above pulled live via `pricing_client.py --profile <your-profile> get-products --service-code AmazonCloudWatch --filter regionCode=us-east-2 …` against the listed `usagetype` values.
 - Region tested via Pricing API: `us-east-2` / `US East (Ohio)`. For other regions, swap the `USE2-` prefix on each `usagetype` (`USE1-` Virginia, `USW2-` Oregon, `EUW1-` Ireland, etc.).
 - **Not yet end-to-end reproduced** — the $222.05 figure requires the SPA's internal mobile-RUM-OTEL byte-per-event factor and an exact Database-Insights engine selection that the form doesn't expose. The shape and per-dimension rates above are individually verified; the aggregate is not byte-perfect against the capture.
 

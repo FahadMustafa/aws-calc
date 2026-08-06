@@ -220,7 +220,7 @@ Tenancy (Shared Instances), Operating system (<OS display>), Workload (Consisten
 
 ## Captured working example
 
-`/home/fahadmustafa/src/aws-calc/poc/sample_input.json` (from `aws-calc` repo) holds two ec2Enhancement entries — one OnDemand t3.small Windows + 500 GB gp3, one Standard RI 3yr No Upfront r5.large Linux + 100 GB gp3. Both verified to round-trip.
+`poc/sample_input.json` (from `aws-calc` repo) holds two ec2Enhancement entries — one OnDemand t3.small Windows + 500 GB gp3, one Standard RI 3yr No Upfront r5.large Linux + 100 GB gp3. Both verified to round-trip.
 
 ## Verification
 

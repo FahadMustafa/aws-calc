@@ -10,7 +10,7 @@ always connects to us-east-1 and uses the regionCode filter to query
 prices for any region.
 
 Auth: respects the standard boto3 chain. For this project, set
-AWS_PROFILE=zaintech-cloudtools (or pass --profile).
+AWS_PROFILE=<your-profile> (or pass --profile).
 
 Usage:
     # Generic SKU lookup

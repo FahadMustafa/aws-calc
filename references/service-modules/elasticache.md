@@ -258,7 +258,7 @@ When the user asks for "ElastiCache Serverless" specifically, flip the defaults:
 
 ## Verification
 
-**Captured ground truth**: `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonElastiCache.json` — Redis OSS in `us-east-2` with two clusters (2× `cache.m5.xlarge` Standard On-Demand + 10× `cache.r6gd.12xlarge` Memory optimized On-Demand), Serverless scalars at 100 GB / 100 KB / 100 req-sec, recorded `serviceCost.monthly = 87106.81` / `upfront = 0`. The capture lives in `captures/saveAs/per-service/` which was sliced out of the full HAR (`captures/calculator.aws.har`, `captures/calculator.aws_new.har`).
+**Captured ground truth**: `captures/saveAs/per-service/amazonElastiCache.json` — Redis OSS in `us-east-2` with two clusters (2× `cache.m5.xlarge` Standard On-Demand + 10× `cache.r6gd.12xlarge` Memory optimized On-Demand), Serverless scalars at 100 GB / 100 KB / 100 req-sec, recorded `serviceCost.monthly = 87106.81` / `upfront = 0`. The capture lives in `captures/saveAs/per-service/` which was sliced out of the full HAR (`captures/calculator.aws.har`, `captures/calculator.aws_new.har`).
 
 **Verified**:
 - Top-level header (`serviceCode`, `estimateFor`, `version`, `serviceName`) — straight from the capture.

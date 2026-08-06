@@ -176,7 +176,7 @@ Source Type (<Direct PUT or Kinesis Data Stream | Kinesis Data Streams | MSK>), 
 
 - Source: captured saveAs body at `/tmp/aws_calc_onboard/amazonKinesisFirehose.json` (path was ephemeral; file lost — re-capture needed; region `us-east-2`, full feature set enabled).
 - Region tested end-to-end: `us-east-2` / `US East (Ohio)`.
-- Reproduced monthly **$10,112.96 within $0.01** using the formula above and rates pulled live via `pricing_client.py --profile zaintech-cloudtools` against ServiceCode `AmazonKinesisFirehose`.
+- Reproduced monthly **$10,112.96 within $0.01** using the formula above and rates pulled live via `pricing_client.py --profile <your-profile>` against ServiceCode `AmazonKinesisFirehose`.
 - Inferred but not directly captured:
   - The KDS-source and MSK-source code paths (`sourceType="kds"`, `"msk"`) — only `"direct"` was exercised in the captured estimate. The rate SKUs exist and the formula slot-in is straightforward, but verify the exact `sourceType` string with a fresh capture before promising those modes.
   - The `recordMultDI` mapping for `"1"` and `"1000000"` is inferred from the `"1000"`→`thousands` capture and the configSummary's "Data records units" wording. Verify with a HAR before relying on the literal strings.

@@ -317,7 +317,7 @@ If the user just says "we use Route 53" without specifics, the right answer is r
 
 ## Verification
 
-Captured saveAs body lives at `/home/fahadmustafa/src/aws-calc/captures/saveAs/per-service/amazonRoute53.json` (extracted from `/home/fahadmustafa/src/aws-calc/captures/calculator.aws_new.har`). The captured `serviceCost.monthly` is **$1596.02** in `us-east-2` with every count set to `"10"`.
+Captured saveAs body lives at `captures/saveAs/per-service/amazonRoute53.json` (extracted from `captures/calculator.aws_new.har`). The captured `serviceCost.monthly` is **$1596.02** in `us-east-2` with every count set to `"10"`.
 
 Rates verified via `pricing_client.py get-products` against `AmazonRoute53` on the date this module was authored (us-east-2 for region-scoped SKUs). Per-dimension contributions with the captured "10" inputs:
 
