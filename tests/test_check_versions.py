@@ -248,3 +248,79 @@ def test_stale_modules_empty_when_clean(cache_dir, modules, monkeypatch, capsys)
 
     assert rc == 0
     assert json.loads(capsys.readouterr().out)["stale_modules"] == []
+
+
+# --- HTTP status classification ----------------------------------------------
+
+import email.message
+import io
+import urllib.error
+import urllib.request
+
+
+def _http_error(status, body=b""):
+    return urllib.error.HTTPError(
+        "https://example.invalid/x", status, "err", email.message.Message(), io.BytesIO(body)
+    )
+
+
+def _raise_on_fetch(monkeypatch, exc):
+    def boom(req, timeout=None):
+        raise exc
+
+    monkeypatch.setattr(check_versions.urllib.request, "urlopen", boom)
+
+
+ACCESS_DENIED = b'<?xml version="1.0"?><Error><Code>AccessDenied</Code></Error>'
+CF_BLOCKED = b"<HTML><HEAD>ERROR: The request could not be satisfied</HEAD></HTML>"
+
+
+def test_404_is_no_live_def(monkeypatch):
+    _raise_on_fetch(monkeypatch, _http_error(404))
+    assert check_versions.fetch_live_version("svcA") == ("svcA", None, "no-live-def")
+
+
+def test_s3_access_denied_403_is_no_live_def(monkeypatch):
+    """The CDN's "this definition does not exist" is a 403 + AccessDenied XML."""
+    _raise_on_fetch(monkeypatch, _http_error(403, ACCESS_DENIED))
+    assert check_versions.fetch_live_version("svcA") == ("svcA", None, "no-live-def")
+
+
+def test_cloudfront_403_is_a_transient_error_not_no_live_def(monkeypatch):
+    """A throttled/blocked 403 must never read as "not drift"."""
+    _raise_on_fetch(monkeypatch, _http_error(403, CF_BLOCKED))
+    assert check_versions.fetch_live_version("svcA") == ("svcA", None, "http 403")
+
+
+def test_cloudfront_403_is_not_cached(cache_dir, monkeypatch):
+    _raise_on_fetch(monkeypatch, _http_error(403, CF_BLOCKED))
+
+    live = check_versions.resolve_live_versions(["svcA"])
+
+    assert live == {"svcA": (None, "http 403")}
+    assert json.loads((cache_dir / "live-versions.json").read_text()) == {}
+
+
+# --- cache merge on refresh ---------------------------------------------------
+
+def test_refresh_preserves_unrelated_cached_codes(cache_dir, monkeypatch):
+    """`--refresh --codes svcA` must not evict svcB from the shared cache file."""
+    b_entry = {"version": "2", "fetched": _iso(datetime.now(timezone.utc))}
+    _write_cache(cache_dir, {"svcA": {"version": "1", "fetched": _iso(datetime.now(timezone.utc))}, "svcB": b_entry})
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "9", None))
+
+    live = check_versions.resolve_live_versions(["svcA"], refresh=True)
+
+    assert live == {"svcA": ("9", None)}
+    stored = json.loads((cache_dir / "live-versions.json").read_text())
+    assert stored["svcA"]["version"] == "9"
+    assert stored["svcB"] == b_entry
+
+
+def test_future_dated_entry_is_refetched(cache_dir, monkeypatch):
+    """Clock skew or a hand-edited file must not pin a stale version indefinitely."""
+    ahead = datetime.now(timezone.utc) + timedelta(days=30)
+    _write_cache(cache_dir, {"svcA": {"version": "1", "fetched": _iso(ahead)}})
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "9", None))
+
+    assert check_versions.resolve_live_versions(["svcA"]) == {"svcA": ("9", None)}

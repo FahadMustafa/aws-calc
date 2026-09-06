@@ -15,7 +15,9 @@ Top-level services AND sub-services (e.g. vpnConnectionVpc, publicIpv4Address) e
 have their own definition file, so both are checked. Codes with no live definition
 (pure UI groupings) are reported as "no-live-def", not as drift.
 
-Exit code: 0 if no drift, 1 if any drift detected, 2 on fetch/parse errors only.
+Exit code: 0 if no drift, 1 if any drift detected, 2 on fetch/parse errors only
+(also 2 when --codes names a serviceCode no module pins, so a typo cannot read
+as a clean run).
 
 Usage:
     python3 scripts/check_versions.py
@@ -30,6 +32,7 @@ Live versions are cached for 24h in $AWS_CALC_CACHE/live-versions.json (default
 from __future__ import annotations
 
 import argparse
+import collections.abc
 import concurrent.futures as cf
 import datetime as dt
 import glob
@@ -159,6 +162,28 @@ def extract_pairs(modules_dir: str) -> dict[str, set[tuple[str, str]]]:
     return pairs
 
 
+def _is_missing_object_403(e: "urllib.error.HTTPError") -> bool:
+    """True only for the S3-origin 403 that means "this definition does not exist".
+
+    The CDN never returns 404: a missing service definition surfaces as a 403 from
+    the S3 origin with an `<Code>AccessDenied</Code>` XML body (bucket without
+    ListBucket). CloudFront's own 403s — throttling, WAF blocks, geo restrictions —
+    are transient and carry an HTML error page instead. Treating those as
+    "no-live-def" would cache a throttled response as "not drift" for 24h, which is
+    exactly the silent failure this whole check exists to prevent, so anything that
+    is not the S3 AccessDenied shape stays a plain `http 403` error.
+    """
+    if e.code != 403:
+        return False
+    try:
+        body = e.read(2048)
+    except Exception:  # noqa: BLE001 - a body we cannot read proves nothing
+        return False
+    if isinstance(body, bytes):
+        body = body.decode("utf-8", "replace")
+    return "<Code>AccessDenied</Code>" in body or "<Code>NoSuchKey</Code>" in body
+
+
 def fetch_live_version(code: str) -> tuple[str, str | None, str | None]:
     """Return (code, live_version_or_None, error_or_None)."""
     url = DATA_URL.format(service=code)
@@ -176,7 +201,7 @@ def fetch_live_version(code: str) -> tuple[str, str | None, str | None]:
         data = json.loads(raw.decode("utf-8"))
         return code, data.get("version"), None
     except urllib.error.HTTPError as e:
-        if e.code == 403 or e.code == 404:
+        if e.code == 404 or _is_missing_object_403(e):
             return code, None, "no-live-def"
         return code, None, f"http {e.code}"
     except Exception as e:  # noqa: BLE001
@@ -206,12 +231,18 @@ def _load_cache() -> dict[str, dict]:
 
 def _save_cache(cache: dict[str, dict]) -> None:
     path = cache_path()
+    tmp = f"{path}.{os.getpid()}.tmp"
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as fh:
+        with open(tmp, "w", encoding="utf-8") as fh:
             json.dump(cache, fh, indent=2, sort_keys=True)
+        os.replace(tmp, path)  # atomic: a crash mid-write cannot truncate the cache
     except OSError:
-        pass  # a cache we cannot write is a slow run, not a failed one
+        # a cache we cannot write is a slow run, not a failed one
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
 
 
 def _is_fresh(entry: object, now: dt.datetime) -> bool:
@@ -223,11 +254,14 @@ def _is_fresh(entry: object, now: dt.datetime) -> bool:
         return False
     if fetched.tzinfo is None:
         fetched = fetched.replace(tzinfo=dt.timezone.utc)
-    return (now - fetched).total_seconds() < CACHE_TTL_SECONDS
+    # a future-dated entry (clock skew, hand-edited file) is not "very fresh" — it is
+    # untrustworthy, so refetch rather than trust it until the clock catches up
+    age = (now - fetched).total_seconds()
+    return 0 <= age < CACHE_TTL_SECONDS
 
 
 def resolve_live_versions(
-    codes, refresh: bool = False
+    codes: collections.abc.Iterable[str], refresh: bool = False
 ) -> dict[str, tuple[str | None, str | None]]:
     """Return {code: (live_version_or_None, error_or_None)}, using the 24h cache.
 
@@ -251,7 +285,7 @@ def resolve_live_versions(
 
     if to_fetch:
         with cf.ThreadPoolExecutor(max_workers=12) as ex:
-            results = list(ex.map(lambda c: fetch_live_version(c), to_fetch))
+            results = list(ex.map(fetch_live_version, to_fetch))
         cache = _load_cache() if refresh else cache
         stamp = now.isoformat()
         for code, version, err in results:
