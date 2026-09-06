@@ -1,0 +1,75 @@
+{
+  "configSummary": "Select the inference route (In Region), Select the inference type (On Demand - Standard), Average requests per minute (1), Hours per day at this rate (8), Average input tokens per request (1), Average output tokens per request (1), Average input images per request (1), Average input image length in pixels (L) (100), Average input image width in pixels (W) (100)",
+  "description": null,
+  "estimateFor": "amazonBedrockClassesGroup",
+  "region": "eu-west-1",
+  "regionName": "Europe (Ireland)",
+  "serviceCode": "amazonBedrock",
+  "serviceCost": {
+    "monthly": 1.02
+  },
+  "serviceName": "Amazon Bedrock",
+  "subServices": [
+    {
+      "calculationComponents": {
+        "avgImageLengthInPixelsIRstan": {
+          "value": "100"
+        },
+        "avgImageWidthInPixelsIRstan": {
+          "value": "100"
+        },
+        "avgImagesPerRequestIRstan": {
+          "value": "1"
+        },
+        "avgInputTokensPerRequestIRstan": {
+          "value": "1"
+        },
+        "avgOutputTokensPerRequestIRstan": {
+          "value": "1"
+        },
+        "avgRequestsPerMinIRstan": {
+          "value": "1"
+        },
+        "cacheRateIRstan": {
+          "value": "50"
+        },
+        "cacheReadIRstan": {
+          "value": "n9r1OkCw7sahKrcm5k_dLlzEu09FwTSCVv5QwmP_Hs4"
+        },
+        "cacheWriteIRstan": {
+          "value": "mJCg-f97ByF7pKaysTOJs737vV6RxBfUYYMwhpWBEvU"
+        },
+        "hoursPerDayAtThisRateIRstan": {
+          "value": "8"
+        },
+        "imageInputIRstan": {
+          "value": "1"
+        },
+        "location": {
+          "value": "ir"
+        },
+        "modelSelectionIRstan": {
+          "value": "IL0BVf3Bmmr22TrGlUfHnPwVaiStbtOD-UyMVzK25bg"
+        },
+        "selectedModelIRstan": {
+          "value": "VAgU0B18jsXx-EUOFzoOdJKya4ShUCjz2HUNlOpDZLM"
+        },
+        "tierIR": {
+          "value": "standard"
+        },
+        "withPromptCachingIRstan": {
+          "value": "1"
+        }
+      },
+      "description": null,
+      "estimateFor": "anthropic",
+      "region": "eu-west-1",
+      "serviceCode": "anthropic",
+      "serviceCost": {
+        "monthly": 1.02
+      },
+      "version": "0.0.37"
+    }
+  ],
+  "version": "0.0.52"
+}

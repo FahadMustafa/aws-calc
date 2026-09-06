@@ -209,7 +209,7 @@ Reproduced the captured `serviceCost.monthly = $67.78` exactly in `us-east-2` wi
 - Lake retention:           10 GB × $0.023                → **$0.23**
 - Lake query scanned:       10 GB × $0.005                → **$0.05**
 
-Total: **$67.78** — exact match to the captured saveAs body at `/tmp/aws_calc_onboard/awsCloudTrail.json` (path was ephemeral; file lost — re-capture needed; originally extracted from `captures/calculator.aws_new.har`, request index 346, posted to `dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs`).
+Total: **$67.78** — exact match to the captured saveAs body at `/tmp/aws_calc_onboard/awsCloudTrail.json` (path was ephemeral; file lost — re-capture needed; originally extracted from `captures/calculator.aws_new.har` (local capture, not in repo), request index 346, posted to `dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs`).
 
 Rates verified via `pricing_client.py get-products` against `AWSCloudTrail` on the date this module was authored. Two surprises worth flagging before relying on this in other Regions: (1) the Pricing API exposes a single `USE2-DataEventsRecorded` SKU at $0.000001/event covering both S3 and Lambda — the marketing page's separate "$0.20/100k Lambda" rate isn't a distinct SKU and appears to apply only to additional trail copies, which the calculator surfaces via the `numberOfLambdaTrails` multiplier; (2) the calculator treats the first trail copy of network-activity events as free (matching management-event semantics), even though AWS docs price them like data events from the first copy. That's the calculator's behavior; it may change.
 

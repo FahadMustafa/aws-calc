@@ -10,7 +10,7 @@
 
 | Path | `estimateFor` | Confidence | Anchor |
 |---|---|---|---|
-| RabbitMQ Cluster (Multi-AZ) | `rabbitMQBroker` | **Verified** end-to-end from HAR | `captures/saveAs/per-service/amazonMQ.json` |
+| RabbitMQ Cluster (Multi-AZ) | `rabbitMQBroker` | **Verified** end-to-end from HAR | `captures/saveAs/per-service/amazonMQ.json` (local capture, not in repo) |
 | ActiveMQ Single Instance | `singleInstanceBroker` (`activeBrokerType: "1"`) | **Inferred** from `captures/bundle.js` form + catalog token table; field values re-checked against form 0.0.60 | bundle.js + mq.json catalog + form 0.0.60 |
 | ActiveMQ Active/Standby | `singleInstanceBroker` (`activeBrokerType: "0"`) — **NOT `activeInstanceBroker`; that template is gone in 0.0.60** | **Inferred** from form 0.0.60 | form 0.0.60 + mq.json catalog |
 | RabbitMQ Single Instance | `rabbitMQBroker` (`rabbitBrokerType: "1"`) | **Verified** end-to-end from live-SPA HAR | sessionStorage capture (2026-06) + mq.json catalog |
@@ -364,6 +364,8 @@ Data transfer SKUs live under `AmazonEC2`; see `vpc.md` Pricing API filters.
 | dataTransfer entries | always emit all 3 entryTypes with `"0"` for unspecified directions | Matches captured shape |
 
 ## Verification
+
+Fixture: `references/fixtures/amazonMQ.json` (Path 1, RabbitMQ Cluster).
 
 - **Path 1 (RabbitMQ Cluster)**: verified from `captures/saveAs/per-service/amazonMQ.json` (eu-west-1). `serviceCost.monthly: $8,167.30` matches `10 × 730 × $0.963 (catalog rate) + storage + DT` within tolerance.
 - **Paths 2/3 (ActiveMQ Single Instance / Active-Standby)**: shape originally taken from `captures/bundle.js`, which at that time had separate `singleInstanceBroker` and `activeInstanceBroker` templates; token table from `mq.json` catalog. **The `activeInstanceBroker` template no longer exists** — both paths were re-derived from form 0.0.60 (see the 2026-09-06 entry below). Round-trip a test save once before quoting at scale.

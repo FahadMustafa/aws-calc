@@ -1,0 +1,62 @@
+{
+  "calculationComponents": {
+    "createRDSProxy": {
+      "value": "1"
+    },
+    "storageAmount": {
+      "value": "100",
+      "unit": "gb|NA"
+    },
+    "storageVolume": {
+      "value": "General Purpose"
+    },
+    "DatabaseInsightsSelected": {
+      "value": "1"
+    },
+    "retentionPeriod": {
+      "value": "0"
+    },
+    "addRDSExtendedSupport": {
+      "value": "1"
+    },
+    "RDSExtendedSupportYear": {
+      "value": "year12"
+    },
+    "columnFormIPM": {
+      "value": [
+        {
+          "Number of Nodes": {
+            "value": "1"
+          },
+          "Instance Type": {
+            "value": "db.m4.2xlarge"
+          },
+          "undefined": {
+            "value": {
+              "unit": "100",
+              "selectedId": "%Utilized/Month"
+            }
+          },
+          "Deployment Option": {
+            "value": "Multi-AZ"
+          },
+          "TermType": {
+            "value": "OnDemand"
+          }
+        }
+      ]
+    }
+  },
+  "serviceCode": "amazonRDSPostgreSQLDB",
+  "region": "us-east-2",
+  "estimateFor": "rdsForPostgreSQL",
+  "version": "0.0.111",
+  "description": null,
+  "serviceCost": {
+    "monthly": 1249.4,
+    "upfront": 0
+  },
+  "serviceName": "Amazon RDS for PostgreSQL",
+  "regionName": "US East (Ohio)",
+  "configSummary": "Storage amount (100 GB), Storage volume (General Purpose SSD (gp2)), Nodes (1), Instance Type (db.m4.2xlarge), Utilization (On-Demand only) (100 %Utilized/Month), Deployment Option (Multi-AZ), Pricing Model (OnDemand)"
+}

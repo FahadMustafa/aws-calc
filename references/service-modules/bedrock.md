@@ -197,7 +197,9 @@ If the user says "Bedrock" without specifying a model, **ask** — per-token rat
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_6.har` → `captures/saveAs/per-service/amazonBedrock.json` (eu-west-1, group with one Anthropic sub-service).
+Fixture: `references/fixtures/amazonBedrock.json`.
+
+- Captured HAR: `captures/calculator.aws_new_6.har` (local capture, not in repo) → `captures/saveAs/per-service/amazonBedrock.json` (eu-west-1, group with one Anthropic sub-service).
 - `serviceCost.monthly: $1.02` is too small to reconstruct meaningfully from per-1K-token rates (volume too low; rounding and image fees dominate). **Formula is structural — rates must be confirmed with a second, higher-volume capture before quoting.**
 - Only one model+cache token combination is known. Cross-region inference, Provisioned Throughput, and Batch inference paths are **NOT covered**.
 - Image-input rate tables are unknown — capture a HAR with high image volume to derive.

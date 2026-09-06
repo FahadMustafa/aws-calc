@@ -1,0 +1,64 @@
+{
+  "version": "0.0.85",
+  "serviceCode": "amazonSimpleStorageServiceGroup",
+  "estimateFor": "simpleStorageServiceClassesGroup",
+  "region": "us-east-2",
+  "description": null,
+  "subServices": [
+    {
+      "calculationComponents": {
+        "moveToStorageClassMethod": {
+          "value": "No movement required"
+        },
+        "s3StandardStorageSize": {
+          "value": "1000",
+          "unit": "gb|month"
+        }
+      },
+      "serviceCode": "amazonS3Standard",
+      "region": "us-east-2",
+      "estimateFor": "s3Standard",
+      "version": "0.0.71",
+      "description": null,
+      "serviceCost": {
+        "monthly": 23,
+        "upfront": 0
+      }
+    },
+    {
+      "calculationComponents": {
+        "dataTransfer": {
+          "value": [
+            {
+              "entryType": "INBOUND",
+              "value": "100",
+              "unit": "tb_month",
+              "fromRegion": ""
+            },
+            {
+              "entryType": "OUTBOUND",
+              "value": "100",
+              "unit": "tb_month",
+              "toRegion": ""
+            }
+          ]
+        }
+      },
+      "serviceCode": "awsS3DataTransfer",
+      "region": "us-east-2",
+      "estimateFor": "awsS3DataTransfer",
+      "version": "0.0.27",
+      "description": null,
+      "serviceCost": {
+        "monthly": 0
+      }
+    }
+  ],
+  "serviceCost": {
+    "monthly": 23,
+    "upfront": 0
+  },
+  "serviceName": "Amazon Simple Storage Service (S3)",
+  "regionName": "US East (Ohio)",
+  "configSummary": "S3 Standard storage (1000 GB per month)"
+}

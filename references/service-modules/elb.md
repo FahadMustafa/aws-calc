@@ -243,7 +243,7 @@ If the user mentions "load balancer" without a type, ask. ALB is the safe defaul
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_3.har` → `captures/saveAs/per-service/elasticLoadBalancing.json` (eu-west-1, single line item, 3 sub-services).
+- Captured HAR: `captures/calculator.aws_new_3.har` (local capture, not in repo) → `captures/saveAs/per-service/elasticLoadBalancing.json` (eu-west-1, single line item, 3 sub-services).
 - NLB formula reproduces the captured `$149.80` exactly.
 - GWLB formula reproduces the captured `$73.15` within $0.15.
 - **ALB formula reconstructs the captured `$222.80` only if the EC2 and Lambda processed-byte dimensions are summed rather than max'd with the other dimensions** — this is the working hypothesis from the single capture. Capture a second saveAs with only the Lambda byte dimension set (everything else "0"), then a third with only EC2 bytes, to confirm whether the SPA sums byte dimensions or takes the max. The published AWS LCU documentation says max-across-dimensions, so this is worth confirming before quoting tight ALB estimates.

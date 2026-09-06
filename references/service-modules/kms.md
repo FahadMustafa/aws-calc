@@ -119,7 +119,7 @@ If the user mentions custom key stores (CloudHSM-backed) or external key stores 
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_5.har` → `captures/saveAs/per-service/awsKeyManagementService.json` (us-east-2, single flat line item).
+- Captured HAR: `captures/calculator.aws_new_5.har` (local capture, not in repo) → `captures/saveAs/per-service/awsKeyManagementService.json` (us-east-2, single flat line item).
 - Total `serviceCost.monthly: $12.23` reconstructs exactly using the inferred rate table above. Five of the six rate-table entries match standard AWS-published values; the sixth (RSA GenerateDataKeyPair at ~$12/10K) is back-calculated and **must be confirmed against the live Pricing API before quoting non-trivial RSA pair-generation volume**.
 - AWS-managed CMKs are free and not modeled here (don't add a hidden +$1 for them).
 - HMAC KMS keys, external key store (XKS) hourly fees, and CloudHSM-backed custom key stores are **NOT covered** — capture HAR before quoting those.

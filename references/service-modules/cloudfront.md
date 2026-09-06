@@ -147,7 +147,7 @@ The SPA refuses to commit a line item where all four quantities are 0 (the `totP
 
 ## Verification
 
-- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2`. Capture file: `captures/calculator.aws_new_2.har`; extracted slice: `captures/saveAs/per-service/amazonCloudFront.json`.
+- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2`. Capture file: `captures/calculator.aws_new_2.har` (local capture, not in repo); extracted slice: `captures/saveAs/per-service/amazonCloudFront.json`.
 - **Captured `serviceCost.monthly` = $1215.00** (form `0.0.45`). Reproduced exactly: `1×$0 (Free) + 1×$15 (Pro) + 1×$200 (Business) + 1×$1000 (Premium) = $1215`. Verified end-to-end.
 - **2026-06 re-verification against live form `0.0.47`:** the four original prices are unchanged; the form added five Premium usage-bundle tiers ($1450 / $2250 / $3500 / $6000 / $10000). Module bumped to `0.0.47` and the nine-field shape above. The new tiers are not yet round-tripped through a saved estimate — capture a HAR if a user selects one, but the cc shape and prices are taken directly from the live service definition.
 - All plan prices sourced from `templates[*].cards[0].mathsSection` `constant` operands in `https://d1qsjq9pzbk1k6.cloudfront.net/data/amazonCloudFront/en_US.json`.

@@ -133,7 +133,7 @@ If the user mentions ARM, Graviton, or Arm64 builds, switch to the `arm1.*` fami
 
 ## Verification
 
-- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2` — per-service slice: `captures/saveAs/per-service/awsCodeBuild.json`.
+- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2` — per-service slice: `captures/saveAs/per-service/awsCodeBuild.json` (local capture, not in repo).
 - Pricing API filter verified via `pricing_client.py get-products` against the live API: SKU `UB8Y5XEZW2M4GZ8Y` with rate `$0.09` per build-minute (unit `minutes`) for `regionCode=us-east-2, computeType=arm1.2xlarge, operatingSystem=Linux, computeFamily=OnDemand-EC2`.
 - Formula verified: `1 build × 10 min × $0.09/min = $0.90`, matches captured `serviceCost.monthly = 0.90` exactly (within $0.00 — no rounding tolerance consumed).
 - **Not yet verified**:

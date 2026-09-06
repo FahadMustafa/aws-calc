@@ -1,0 +1,49 @@
+{
+  "calculationComponents": {
+    "dataTransfer": {
+      "value": [
+        {
+          "entryType": "INBOUND",
+          "fromRegion": "External",
+          "unit": "tb_month",
+          "value": "10"
+        },
+        {
+          "entryType": "OUTBOUND",
+          "toRegion": "External",
+          "unit": "tb_month",
+          "value": "10"
+        },
+        {
+          "entryType": "INTRA_REGION",
+          "unit": "tb_month",
+          "value": "10"
+        }
+      ]
+    },
+    "rabbitBrokerType": {
+      "value": "0"
+    },
+    "rabbitmqInstanceTypeClustered": {
+      "value": "5hcZU6WguRUktrgs8rMw8I50JgkU3TyzOOdhtsRRjXs"
+    },
+    "rabbitmqNumberOfClusteredBrokers": {
+      "value": "10"
+    },
+    "rabbitmqstoragePerNodeClustered": {
+      "unit": "gb|NA",
+      "value": "10"
+    }
+  },
+  "configSummary": "Broker type (3-node cluster Broker), DT Inbound: Internet (10 TB per month), DT Outbound: Internet (10 TB per month), DT Intra-Region: (10 TB per month), Amazon RabbitMQ Broker Instance (mq.m5.large), Number of clustered Brokers (10), Storage per node (10 GB)",
+  "description": null,
+  "estimateFor": "rabbitMQBroker",
+  "region": "eu-west-1",
+  "regionName": "Europe (Ireland)",
+  "serviceCode": "amazonMQ",
+  "serviceCost": {
+    "monthly": 8167.3
+  },
+  "serviceName": "Amazon MQ",
+  "version": "0.0.59"
+}

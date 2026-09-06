@@ -394,7 +394,7 @@ snapshotFrequency), list it in the breakdown so the user can correct.
 
 ## Verification
 
-- **Ground truth**: `captures/saveAs/per-service/amazonElasticBlockStore.json`
+- **Ground truth**: `captures/saveAs/per-service/amazonElasticBlockStore.json` (local capture, not in repo)
   — captured saveAs POST body from the calculator.aws SPA.
 - **Snapshot-shape ground truth (live-SPA, recompute-safe)** — the `/tmp/rbm_frags/*.json` paths below were ephemeral (path was ephemeral; file lost — re-capture needed):
   - `/tmp/rbm_frags/51.json` — eu-west-1 EBS snapshot storage,

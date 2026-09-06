@@ -79,7 +79,7 @@ If the user mentions CI/CD targeting only EC2, Lambda, or ECS, **do not add a Co
 
 ## Verification
 
-- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2` — captured HAR: `calculator.aws_new_2.har`, per-service slice: `captures/saveAs/per-service/awsCodeDeploy.json`.
+- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2` — captured HAR: `calculator.aws_new_2.har`, per-service slice: `captures/saveAs/per-service/awsCodeDeploy.json` (local capture, not in repo).
 - Pricing API filters above verified via `pricing_client.py get-products` against the live API: returns SKU `AUS7RDUXSK33Y676` with rate `$0.02` per on-prem instance update (unit `OnPremUpdates`) for `regionCode=us-east-2`.
 - Formula verified: `10 on-prem instances × 4 deployments/month × $0.02 = $0.80`, which matches the captured `serviceCost.monthly` of `$0.80` exactly.
 - EC2 / Lambda / ECS deployment paths are not modeled here — they are free per AWS pricing and the calculator form has no inputs for them. If a future capture surfaces additional `calculationComponents` keys for non-on-prem deployments, re-verify before relying on this module for those workloads.

@@ -99,6 +99,6 @@ If the user says "Transfer Family" or "Transfer for SFTP" without specifying web
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_3.har` → `captures/saveAs/per-service/aWSTransferForSFTP.json` (eu-west-1, single line item, 1 sub-service: web apps with `numberOfWebApps: "2"`).
+- Captured HAR: `captures/calculator.aws_new_3.har` (local capture, not in repo) → `captures/saveAs/per-service/aWSTransferForSFTP.json` (eu-west-1, single line item, 1 sub-service: web apps with `numberOfWebApps: "2"`).
 - Web Apps formula matches captured `$730` exactly (2 units × $0.50/h × 730h).
 - **SFTP/FTPS/FTP server endpoints and AS2/SFTP connectors are NOT covered** — refuse to quote them from this module; capture HAR first.

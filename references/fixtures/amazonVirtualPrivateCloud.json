@@ -1,0 +1,60 @@
+{
+  "version": "0.0.101",
+  "serviceCode": "amazonVirtualPrivateCloud",
+  "estimateFor": "virtualPrivateCloudSubServiceSelector",
+  "region": "us-east-2",
+  "description": null,
+  "subServices": [
+    {
+      "calculationComponents": {
+        "averageDurationForEachConnection": {
+          "value": "24",
+          "unit": "perDay"
+        },
+        "vpnConnection_numberOfWorkDays": {
+          "value": "22"
+        },
+        "vpnConnection_clientAvgDuration": {
+          "value": "10",
+          "unit": "perDay"
+        },
+        "numberOfSiteToSiteVPNConnections": {
+          "value": "2"
+        }
+      },
+      "serviceCode": "vpnConnectionVpc",
+      "region": "us-east-2",
+      "estimateFor": "VPNConnection",
+      "version": "0.0.19",
+      "description": null,
+      "serviceCost": {
+        "monthly": 73
+      }
+    },
+    {
+      "calculationComponents": {
+        "numberOfTransitGatewayAttachments": {
+          "value": "10"
+        },
+        "dataProcessedPerTransitGatewayAttachment": {
+          "value": "10",
+          "unit": "gb|month"
+        }
+      },
+      "serviceCode": "transitGatewayVpc",
+      "region": "us-east-2",
+      "estimateFor": "transitGateway",
+      "version": "0.0.19",
+      "description": null,
+      "serviceCost": {
+        "monthly": 367
+      }
+    }
+  ],
+  "serviceCost": {
+    "monthly": 440
+  },
+  "serviceName": "Amazon Virtual Private Cloud (VPC)",
+  "regionName": "US East (Ohio)",
+  "configSummary": "Working days per month (22), Number of Site-to-Site VPN Connections (2) Number of Transit Gateway attachments (10)"
+}

@@ -54,6 +54,7 @@ The calculator's save endpoint is unauthenticated. On load the SPA displays the 
 - `references/`
   - `body-schema.md`, `url-spec.md`, `service-codes.md` — top-level conventions.
   - `examples/` — captured ground-truth saveAs bodies, including `sample-saveas-body.json` (EC2 ×2 + RDS PostgreSQL + S3 + VPC).
+  - `fixtures/` — the same ground-truth line items, split one-per-file (`<serviceCode>.json`) for quick lookup and schema testing.
   - `service-modules/` — one file per supported service (42 services; see `references/service-codes.md` for the current index). `_template.md` is the extension recipe.
 - `captures/` — local-only, gitignored (HAR files are large and may contain session tokens). Created when you record HAR captures to derive new modules; `scripts/extract_saveas.py` writes extracted saveAs bodies here.
 - `findings.md` — original discovery write-up.

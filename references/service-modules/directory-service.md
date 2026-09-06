@@ -120,7 +120,7 @@ If the user mentions "Active Directory" or "AD" without specifying AWS Managed A
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_3.har` → `captures/saveAs/per-service/aWSDirectoryService.json` (eu-west-1, single flat line item, no subServices array).
+- Captured HAR: `captures/calculator.aws_new_3.har` (local capture, not in repo) → `captures/saveAs/per-service/aWSDirectoryService.json` (eu-west-1, single flat line item, no subServices array).
 - Shape is verified verbatim, including the unusual `columnFormIPM_*.value` array-of-row-objects pattern and the human-readable string keys.
 - Pricing math reconstructs the captured `$481.80` within ~$7 using assumed US rates; **always pull live eu-west-1 (or the user's region) rates from the Pricing API before quoting**.
 - AD Connector and Simple AD are **NOT covered** — capture HAR before quoting them.

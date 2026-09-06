@@ -109,7 +109,7 @@ If the user mentions "Direct Connect" without a location, **ask**. If they menti
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_4.har` → `captures/saveAs/per-service/awsDirectConnect.json` (region `eu-west-1` field but **priced at Newark, NJ**).
+- Captured HAR: `captures/calculator.aws_new_4.har` (local capture, not in repo) → `captures/saveAs/per-service/awsDirectConnect.json` (region `eu-west-1` field but **priced at Newark, NJ**).
 - Port-hour math matches captured `$32,850.28` exactly using $22.50/h for the 2 × 100G Dedicated ports at Newark.
 - Data transfer math infers $0.028/GB for `eu-west-1` source → Newark DX out from the residual $0.28; **re-derive from a higher-DT capture to confirm**.
 - **Hosted ports** (sub-1G capacities) are NOT covered by this capture — the shape should be identical, but the per-hour rates and capacity enumeration differ. Capture a hosted-port HAR before quoting.

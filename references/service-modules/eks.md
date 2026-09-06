@@ -164,7 +164,7 @@ The captured summary lists "Number of EKS Clusters" twice (once for standard sup
 
 ## Verification
 
-- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2`: see `captures/saveAs/per-service/awsEks.json`.
+- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2`: see `captures/saveAs/per-service/awsEks.json` (local capture, not in repo).
 - Per-component rates verified two ways:
   - Pricing API (`pricing_client.py get-products --service-code AmazonEKS --filter regionCode=us-east-2 ...`) — returns the same numbers as the runtime JSON for every metered unit checked.
   - SPA runtime feed `https://calculator.aws/pricing/2.0/meteredUnitMaps/eks/USD/current/eks.json` (captured in `calculator.aws_new_2.har`) — keyed by regionless metered-unit hash, returns the same prices.

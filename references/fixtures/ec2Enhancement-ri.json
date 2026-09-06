@@ -1,0 +1,79 @@
+{
+  "calculationComponents": {
+    "tenancy": {
+      "value": "shared"
+    },
+    "selectedOS": {
+      "value": "linux"
+    },
+    "workloadSelection": {
+      "value": "consistent"
+    },
+    "storageType": {
+      "value": "Storage General Purpose gp3 GB Mo"
+    },
+    "dataTransferForEC2": {
+      "value": [
+        {
+          "entryType": "INBOUND",
+          "value": "",
+          "unit": "tb_month",
+          "fromRegion": ""
+        },
+        {
+          "entryType": "OUTBOUND",
+          "value": "",
+          "unit": "tb_month",
+          "toRegion": ""
+        },
+        {
+          "entryType": "INTRA_REGION",
+          "value": "",
+          "unit": "tb_month"
+        }
+      ]
+    },
+    "workload": {
+      "value": {
+        "workloadType": "consistent",
+        "data": "1"
+      }
+    },
+    "instanceType": {
+      "value": "r5.large"
+    },
+    "pricingStrategy": {
+      "value": {
+        "selectedOption": "standard",
+        "term": "3 Year",
+        "upfrontPayment": "None",
+        "model": "standard"
+      }
+    },
+    "snapshotFrequency": {
+      "value": "0"
+    },
+    "detailedMonitoringCheckbox": {
+      "value": false
+    },
+    "ec2AdvancedPricingMetrics": {
+      "value": 1
+    },
+    "storageAmount": {
+      "value": "100",
+      "unit": "gb|NA"
+    }
+  },
+  "serviceCode": "ec2Enhancement",
+  "region": "us-east-2",
+  "estimateFor": "template",
+  "version": "0.0.68",
+  "description": null,
+  "serviceCost": {
+    "monthly": 47.42,
+    "upfront": 0
+  },
+  "serviceName": "Amazon EC2",
+  "regionName": "US East (Ohio)",
+  "configSummary": "Tenancy (Shared Instances), Operating system (Linux), Workload (Consistent, Number of instances: 1), Advance EC2 instance (r5.large), Pricing strategy (Standard Reserved Instances 3yr  No Upfront), Enable monitoring (disabled), EBS Storage amount (100 GB), DT Inbound: Not selected (0 TB per month), DT Outbound: Not selected (0 TB per month), DT Intra-Region: (0 TB per month)"
+}

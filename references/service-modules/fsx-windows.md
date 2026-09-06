@@ -114,7 +114,7 @@ Round to two decimal places to match the SPA's display.
 
 ## Verification
 
-- Captured saveAs slice: `captures/saveAs/per-service/amazonFSx.json` (region us-east-2, version `0.0.92`).
+- Captured saveAs slice: `captures/saveAs/per-service/amazonFSx.json` (local capture, not in repo) (region us-east-2, version `0.0.92`).
 - Captured `serviceCost.monthly = 226.50`. Reproduced:
   - storage: `100 * 0.130 * (1 - 0.50) = $6.50`
   - throughput: `100 * 2.20 = $220.00`

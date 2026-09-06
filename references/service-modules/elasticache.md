@@ -18,7 +18,7 @@ Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and E
 }
 ```
 
-`estimateFor`, `version`, and `serviceName` taken verbatim from `captures/saveAs/per-service/amazonElastiCache.json`.
+`estimateFor`, `version`, and `serviceName` taken verbatim from `captures/saveAs/per-service/amazonElastiCache.json` (local capture, not in repo).
 
 ## calculationComponents (verified shape)
 

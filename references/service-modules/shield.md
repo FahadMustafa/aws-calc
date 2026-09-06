@@ -111,7 +111,7 @@ Shield Advanced is also priced **per-organization** in AWS Organizations (one su
 
 ## Verification
 
-- Captured HAR: `captures/calculator.aws_new_4.har` → `captures/saveAs/per-service/awsShield.json` (eu-west-1, single flat line item).
+- Captured HAR: `captures/calculator.aws_new_4.har` (local capture, not in repo) → `captures/saveAs/per-service/awsShield.json` (eu-west-1, single flat line item).
 - Total `serviceCost.monthly: $3,153.60` reconstructs exactly as `$3,000 base + $153.60 DT` for 1 TB across each of the four resource types.
 - Per-resource-type DT rates inferred from the single capture — confirm with a second capture that varies usage per resource (e.g. only CloudFront non-zero) before relying on the per-rate table for non-uniform mixes.
 - **Shield Standard is NOT in scope** (free tier, no line item).

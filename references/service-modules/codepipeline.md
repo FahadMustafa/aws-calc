@@ -94,7 +94,7 @@ If the user mentions "modern CodePipeline", "V2 pipelines", "action-level concur
 
 ## Verification
 
-- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2` — per-service slice: `captures/saveAs/per-service/awsCodePipeline.json`.
+- Shape captured from a working saveAs body the calculator round-tripped on 2026-05-11 in `us-east-2` — per-service slice: `captures/saveAs/per-service/awsCodePipeline.json` (local capture, not in repo).
 - Pricing API filters above verified via `pricing_client.py get-products` against the live API: `Active Pipeline` family returns SKU `37SVZYDNWKHSDATH` with rate `$1.00` per additional active pipeline (unit `pipelines`); `Action Execution Minutes` family returns SKU `6XVWMQRY9F5WZBUK` with rate `$0.002` per action execution minute (unit `minutes`) — both for `regionCode=us-east-2`.
 - Formula verified: `max(0, 10-1) × $1.00 + 10 × $0.002 = $9.00 + $0.02 = $9.02`, which the SPA displays as `$9` (integer rounding — see "Rounding caveat" above). Within the ±$0.05 reproduction tolerance.
 - V1 free-tier subtraction is inferred from the public pricing page (the chargeable SKU's description says "$1.00 per **additional** active pipeline") and consistent with the captured `serviceCost.monthly=9` for 10 pipelines. Single-pipeline edge case (where chargeable_v1 = 0) is not yet round-tripped end-to-end — capture a fresh HAR with `numberOfPipelines=1` before relying on it for a customer quote.

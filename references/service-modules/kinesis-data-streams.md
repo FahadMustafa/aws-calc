@@ -222,7 +222,7 @@ When the user is silent, use **classic On-Demand with 10 rec/s × 10 KB, 1-day r
 
 ## Verification
 
-- Source: `captures/calculator.aws_new.har` (the `POST /Prod/v2/saveAs` body holds all three line items).
+- Source: `captures/calculator.aws_new.har` (local capture, not in repo) (the `POST /Prod/v2/saveAs` body holds all three line items).
 - Region tested end-to-end: `us-east-2` / `US East (Ohio)`.
 - Reproduced monthlies (rates pulled live via `pricing_client.py --profile <your-profile>`, ServiceCode `AmazonKinesis`):
   - Provisioned: **$273.85** captured → computed $273.85 with `shards = ceil(1 × 1.2) = 2`, 10 EFO consumers × 2 shards × 730 hr × $0.015 + 10 × 250.63 GB × $0.013 + 2 × 730 × $0.015 + 26.28 M PU × $1.4e-8.

@@ -224,12 +224,14 @@ Tenancy (Shared Instances), Operating system (<OS display>), Workload (Consisten
 
 ## Verification
 
+Fixture: `references/fixtures/ec2Enhancement.json` (On-Demand t3.small Windows), `references/fixtures/ec2Enhancement-ri.json` (Standard RI 3yr No Upfront r5.large Linux).
+
 ### Ground-truth sources found on disk
 
 - `references/examples/sample-saveas-body.json` — the primary ground truth. Contains **two full `ec2Enhancement` line items with `serviceCost`**, both `estimateFor: "template"`, `version: "0.0.68"`, region `us-east-2`:
   - **t3.small, Windows, On-Demand 100% util, 500 GB gp3, snapshotFrequency 30, no DT** → `serviceCost.monthly 68.62`, `upfront 0`.
   - **r5.large, Linux, Standard RI 3yr No Upfront, 100 GB gp3, snapshotFrequency 0, no DT** → `serviceCost.monthly 47.42`, `upfront 0`.
-- `captures/calculator.aws.har`, `captures/calculator.aws_new.har`, `captures/calculator.aws_new_2.har` — raw HAR captures that contain the `ec2Enhancement` request body (source the sample body was extracted from). No standalone per-service EC2 extract was produced under `captures/saveAs*/per-service/`.
+- `captures/calculator.aws.har` (local capture, not in repo), `captures/calculator.aws_new.har`, `captures/calculator.aws_new_2.har` — raw HAR captures that contain the `ec2Enhancement` request body (source the sample body was extracted from). No standalone per-service EC2 extract was produced under `captures/saveAs*/per-service/`.
 - `captures/saveAs/per-service/amazonElasticBlockStore.json` — **NOT** an EC2 line item. It is the separate `amazonElasticBlockStore` service (`serviceCode: "amazonElasticBlockStore"`, `estimateFor: "elasticBlockStore"`), so it is not ground truth for `ec2Enhancement`. It only corroborates the incremental-snapshot model indirectly (that module bills a distinct "amount changed per snapshot", not full-volume × count).
 
 ### Live-SPA verified (do not regress these)

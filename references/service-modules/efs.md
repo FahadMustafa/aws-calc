@@ -16,7 +16,7 @@ Covers Amazon Elastic File System: Standard storage plus Infrequent Access and A
 }
 ```
 
-Values pulled from `captures/saveAs/per-service/amazonEFS.json`.
+Values pulled from `captures/saveAs/per-service/amazonEFS.json` (local capture, not in repo).
 
 ## calculationComponents (verified shape)
 

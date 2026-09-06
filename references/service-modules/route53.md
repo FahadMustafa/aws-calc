@@ -18,7 +18,7 @@ Route 53 itself is a global service — `serviceCode` is `amazonRoute53` and mos
 }
 ```
 
-Note `estimateFor` is `"Route53"` (not `"template"` as with EC2). Pulled directly from `captures/saveAs/per-service/amazonRoute53.json`.
+Note `estimateFor` is `"Route53"` (not `"template"` as with EC2). Pulled directly from `captures/saveAs/per-service/amazonRoute53.json` (local capture, not in repo).
 
 ## calculationComponents (verified shape)
 
