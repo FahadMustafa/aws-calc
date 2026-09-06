@@ -2,6 +2,22 @@
 
 Covers Amazon DynamoDB end-to-end. Unlike EC2 or Kinesis, the calculator models DynamoDB as a **group** line item: the parent envelope (`serviceCode: amazonDynamoDb`) holds `serviceCost` and `configSummary`, and the actual configuration lives in an array of `subServices[]`. Each `subService` is its own form bundle with its own `serviceCode`, `estimateFor`, `version`, and `calculationComponents`. Include only the sub-services the user actually configured — the calculator omits the rest entirely (not as empty objects).
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| `dynamoDbOnDemand` (request units + flat storage, no 25 GB free tier) | capture-verified | `captures/saveAs/per-service/amazonDynamoDb.json` (local capture) — $9.38 reconciled to the cent |
+| `amazonDynamoDbDaxClusters` (3 x r5.large) | capture-verified | same capture — $558.45 exact |
+| `dynamoDbBackup` (backup + PITR + restore) | capture-verified | same capture — $4.50 exact (restore per-GB rate inferred to close it) |
+| `dynamoDbDataExportToAmazonS3` / `dynamoDbDataImportFromAmazonS3` | capture-verified | same capture — $2.00 and $1.50 exact |
+| `amazonDynamoDbStreams` / `dynamoDbChangeDateCapture` cc shape | capture-verified | same capture — both $0 (below free-tier / rounds to zero); rates not exercised |
+| `amazonDynamoDbProvisionedThroughputCapacity` cc shape + 100% reserved upfront | capture-verified | same capture — $180 upfront matches baseline sizing |
+| Provisioned peak/baseline blend formula | inferred | not reconciled ($30.75 computed vs $28.64 captured; upfront and recurring use different bases) — do not quote without a HAR |
+| Transactional / eventually-consistent / IA RU multipliers | inferred | taken from public pricing docs, not from the SPA bundle |
+| Restore-size per-GB rate outside us-east-2 | inferred | $0.15 back-derived from the captured total |
+| 3-year reserved capacity and DAX Reserved | inferred | not exposed by the Price List API or the calculator UI — map to 1yr / on-demand and flag |
+| `configSummary` for provisioned at 0% reserved capacity | inferred | only the 100%-reserved case is captured |
+
 ## Line-item header (parent envelope)
 
 ```json

@@ -7,6 +7,21 @@ on its own — e.g. shared volumes, snapshot-heavy archive workloads, or storage
 not tied to a specific EC2 fleet. If the user is already building an EC2 line
 item with attached storage, prefer the `ec2Enhancement` module.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| gp3 volume line (10 TB, eu-central-1) | recompute-verified | live-SPA fragment idx87 (2026-06) — always recomputed fine |
+| Snapshot storage shape (gp2 `storageType`, 1 GB `storageAmount`, `snapshotFrequency: "1"`, `snapshotAmount` ~ 2x target GB) | recompute-verified | live-SPA fragments idx51 ($452.24) / idx88 ($660.91), 2026-06; the old gp3 shape recomputed to $0.00 |
+| Volume line cc field set and unit strings | capture-verified | `captures/saveAs/per-service/amazonElasticBlockStore.json` (local capture) |
+| 50% partial-storage-month discount at `snapshotFrequency: "1"` | capture-verified | back-solved against idx51 / idx88 |
+| Pricing API filters (volume storage, snapshot storage, EBS direct API) | capture-verified | confirmed against `pricing_client.py get-products` in us-east-2 |
+| `storageType` -> `volumeApiName` mapping beyond `Storage General Purpose GB Mo` | inferred | reconstructed from bundle.js display strings |
+| io2 / io2 Block Express / gp3 IOPS + throughput surcharges | inferred | no matching bundle strings on the standalone form — route to `ec2Enhancement` |
+| Fast Snapshot Restore / `numberOfSnapshotsToRestore` charge | inferred | formula sets `monthly_fsr = 0`; the $5,484.14 capture shows the SPA charges more |
+| Snapshot archive tier | inferred | Pricing API SKU exists, no field in the captured cc |
+| Cross-region snapshot copy | inferred | no GB field on the form — model as a separate DT line |
+
 Notable form quirks vs. the EC2 module's EBS section:
 
 - Has its own snapshot-management fields (`snapshotAmount`,

@@ -2,6 +2,18 @@
 
 One line item covers every paid GuardDuty dimension exposed by the calculator: foundational CloudTrail / VPC Flow Log / DNS / S3 / EKS event analysis, runtime monitoring (EC2 / ECS-Fargate / EKS / Lambda / RDS / Aurora Serverless), and Malware Protection (EBS, EC2 AMI, S3 backup, S3 data + PUT).
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| All 17 documented cc dimensions at "10" (us-east-2) | capture-verified | captured saveAs (`/tmp/aws_calc_onboard/amazonGuardDuty.json`, lost) — $90.20 hand-total matches exactly |
+| Foundational event analysis (CloudTrail / VPC Flow / DNS / S3 / EKS events) | capture-verified | same capture |
+| Runtime monitoring vCPU/ACU dimensions (EC2, ECS-Fargate, EKS, Lambda, RDS, Aurora Serverless) | capture-verified | same capture |
+| Malware Protection (EBS, EC2 AMI, S3 backup, S3 data + PUT) | capture-verified | same capture; the calculator skips the 1 GB free band |
+| `aiDataEvents` (AI Protection) | inferred | form 0.0.77 definition (2026-09-06); Pricing API SKU not resolved — look the rate up before quoting |
+| Other fields present in form 0.0.77 that no capture exercised | inferred | form 0.0.77 definition only |
+| Regions other than us-east-2 | inferred | per-region rates should be re-queried |
+
 ## Line-item header
 
 ```json

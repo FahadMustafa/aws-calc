@@ -2,6 +2,15 @@
 
 `serviceCode` is `awsShield`, `estimateFor` is `template`. This module covers **Shield Advanced** — Shield Standard is free and never appears in calculator.aws estimates. Flat line item, no `subServices` array; the four protected-resource-type usage values live as top-level fields in `calculationComponents`.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Shield Advanced base subscription + four protected-resource-type DT fields (eu-west-1) | capture-verified | `captures/saveAs/per-service/awsShield.json` (local capture) — $3,153.60 = $3,000 base + $153.60 DT |
+| Per-resource-type DT rates for a non-uniform resource mix | inferred | back-calculated from one uniform 1 TB-each capture; they do not match the published $0.05/GB headline |
+| Shield Standard | inferred | free, never appears as a line item — out of scope |
+| Organization-level subscription handling | inferred | module assumes a fresh per-account subscription — ask the user |
+
 ## Line-item header
 
 ```json

@@ -2,6 +2,15 @@
 
 Single line item covering both pipeline types in one form: **V1 active pipelines** (flat per-pipeline monthly fee, with the first pipeline per account per month free) and **V2 action-execution minutes** (per-minute usage charge for V2 pipelines). The calculator combines both into one estimate row; if a workload uses only one pipeline type, leave the other input at `0`.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| V1 active pipelines + V2 action-execution minutes (10 and 10, us-east-2) | capture-verified | `captures/saveAs/per-service/awsCodePipeline.json` (local capture) — $9.02 vs the SPA's displayed $9 |
+| V1 and V2 rate lookups | capture-verified | `pricing_client.py get-products` (SKUs 37SVZYDNWKHSDATH $1.00/pipeline, 6XVWMQRY9F5WZBUK $0.002/minute) |
+| V1 free-tier subtraction (first pipeline free) | inferred | taken from the public pricing page and consistent with the capture, but the `numberOfPipelines=1` edge case is not round-tripped |
+| Multi-region free-tier handling (one region claims the free pipeline) | inferred | from AWS account-level billing semantics, not a capture |
+
 ## Line-item header
 
 ```json

@@ -2,6 +2,22 @@
 
 Single line item that covers the Aurora PostgreSQL cluster: provisioned and/or Serverless v2 / Limitless instances, cluster storage (Standard or I/O-Optimized), I/O requests, backups, snapshot export to S3, RDS Proxy, Database Insights advanced, and Aurora Extended Support. **Not the same as `amazonRDSPostgreSQLDB`** — Aurora's storage is cluster-volume rather than instance-attached EBS, the I/O-Optimized configuration changes both instance and storage SKUs, and Serverless v2 / Limitless are billed in Aurora Capacity Unit hours, not instance-hours.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Provisioned instance, Reserved 3-field encoding (`TermType`/`LeaseContractLength`/`PurchaseOption`) | recompute-verified | live-SPA fragments 2026-06 (idx31/56/60/115; packed string recomputed to ~15% of stored) |
+| Provisioned instance On-Demand + cluster storage (db.r6g.large, us-east-2) | capture-verified | `captures/saveAs/per-service/amazonRDSAuroraPostgreSQLCompatibleDB.json` (local capture, $243.58) |
+| Backup storage + snapshot export fields | capture-verified | same capture (100 GB backup, 100 GB/month export) |
+| Add-on flags (RDS Proxy, Database Insights Advanced, Extended Support) | capture-verified | same capture (flags set; rates not independently reconciled) |
+| Measured I/O values preserved (`totalReads_BaseIO` ~129.22 -> ~$75/mo) | recompute-verified | live-SPA fragment idx31 (2026-06) |
+| Aurora Standard I/O accounting from IOPS fields to monthly IO count | inferred | the `* 0.5` base estimate is not reverse-engineered — keep placeholders or use I/O-Optimized |
+| Aurora Serverless v2 / Limitless row shape (ACU fields) | inferred | field names not captured — do not invent |
+| Aurora Global Database flag + replicated-write-IO field | inferred | not present in the capture |
+| Performance Insights paid retention (separate from `DatabaseInsightsSelected`) | inferred | breakout field name unconfirmed |
+| I/O-Optimized Reserved rates / Standard-vs-IO-Optimized RI parity | inferred | no published Reserved terms exercised |
+| `configSummary` when add-ons are enabled | inferred | capture omits them despite the flags being set |
+
 ## Line-item header
 
 ```json

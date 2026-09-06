@@ -2,6 +2,19 @@
 
 Serverless container compute for ECS tasks (and EKS pods). One line item per task profile (vCPU/memory/storage combo + run rate). The captured form is **Linux x86 ECS-task On-Demand only** — other modes (Linux ARM, Windows, Spot, EKS pods) are inferred from the Pricing API and not yet round-tripped.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Linux x86 ECS task On-Demand (vCPU + memory + ephemeral storage, us-east-2) | capture-verified | `captures/saveAs/per-service/awsFargate.json` (local capture, 2026-05-11) — $0.04 matches exactly |
+| Linux x86 vCPU / memory rates | capture-verified | `pricing_client.py get-products` against `AmazonECS`, us-east-2 |
+| `numberOfTasks.unit: "perDay"` + `taskDuration` conversion | capture-verified | same capture |
+| Linux ARM (`selectArchitecture: "arm"`) | inferred | rates known, field-name assumption unverified |
+| Windows (`operatingSystem: "windows"`) | inferred | adds an OS-license per-vCPU charge; form shape not captured |
+| Fargate Spot | inferred | Pricing API exposes no Spot rates; the cc field is assumed — capture before quoting |
+| Ephemeral storage above the 20 GB/task free allowance | inferred | overage rate confirmed, free-tier subtraction logic not round-tripped |
+| `numberOfTasks.unit` of `perMonth` / `perHour` | inferred | assumed from SPA UI conventions |
+
 ## Line-item header
 
 ```json

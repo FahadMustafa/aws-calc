@@ -2,6 +2,16 @@
 
 `serviceCode` is `awsKeyManagementService`, `estimateFor` is `kms`. Flat line item, no `subServices` array. All six priced dimensions are top-level keys in `calculationComponents`.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Customer-managed CMKs + request volume (all six cc dimensions, us-east-2) | capture-verified | `captures/saveAs/per-service/awsKeyManagementService.json` (local capture) — $12.23 reconstructs exactly |
+| Five of the six rate-table entries | capture-verified | match standard AWS-published values and close the captured total |
+| RSA `GenerateDataKeyPair` rate (~$12/10K) | inferred | back-calculated from a single capture — never quote from the baked-in number |
+| HMAC keys, external key store (XKS) hourly fees, CloudHSM-backed custom key stores | inferred | not covered — refuse and capture a HAR |
+| AWS-managed CMKs | inferred | free and not modeled here — do not add a hidden charge |
+
 This module covers **customer-managed CMKs and request volume**. It does **not** cover external key store (XKS) hourly fees, custom key stores backed by CloudHSM, or HMAC-only KMS keys (which have a distinct pricing schedule). Capture HAR before quoting those.
 
 ## Line-item header

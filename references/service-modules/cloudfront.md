@@ -1,5 +1,15 @@
 # Amazon CloudFront (`amazonCloudFront`)
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Flat-Rate Plans (`productPackd1`) — original four tiers Free / Pro / Business / Premium | capture-verified | `captures/saveAs/per-service/amazonCloudFront.json` (local capture, form 0.0.45) — $1215.00 reproduced exactly |
+| Plan prices and field-to-plan mapping | capture-verified | `mathsSection` constants + `operands[].variableId` in the live `amazonCloudFront/en_US.json` |
+| Five Premium usage-bundle tiers added in form 0.0.47 | inferred | cc shape and prices read from the live service definition; no saved estimate has round-tripped one |
+| `configSummary` phrasing for the new tiers | inferred | extrapolated from the original pattern; exact label text unconfirmed |
+| Pay-as-you-go usage-based CloudFront (`estimateFor: "CDN"`) | inferred | template exists in the same definition but has never been captured — do not emit |
+
 > **Scope — read first.** This module covers the **`productPackd1` form (CloudFront Flat-Rate Plans)** only. It is the calculator's "Flat Rate" template — a bundled monthly subscription (CDN + WAF + DDoS + DNS + logging + Lambda@Edge + S3 storage credits) sold as Free / Pro / Business / Premium tiers.
 >
 > Standard **usage-based CloudFront pricing** (per-GB data transfer, per-HTTPS-request, per-invalidation, etc.) lives in a separate `estimateFor: "CDN"` template that is **not yet captured**. If the user's brief implies CDN traffic, data transfer out, request volume, or anything metered — flag to the user, capture a HAR of the Pay-as-you-go form, and add a second module before producing the estimate. Do not silently substitute the flat-rate form for a metered workload.

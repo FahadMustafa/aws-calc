@@ -2,6 +2,14 @@
 
 `serviceCode` is `aWSDirectoryService` (lowercase `a`, uppercase `WS`). `estimateFor` is `managedMicrosoftActiveDirectory` — this module covers the **AWS Managed Microsoft AD** form only. The other Directory Service offerings (AD Connector, Simple AD) use different `estimateFor` values and are **not in this capture**.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| AWS Managed Microsoft AD (`managedMicrosoftActiveDirectory`) cc shape, eu-west-1 | capture-verified | `captures/saveAs/per-service/aWSDirectoryService.json` (local capture) — shape verbatim, including the `columnFormIPM_*` row arrays |
+| Directory hosting + directory sharing cost math | inferred | reconstructs the captured $481.80 only within ~$7 using assumed US rates — pull live regional rates |
+| AD Connector and Simple AD | inferred | different `estimateFor` values, not covered — capture a HAR first |
+
 This is a **flat** line item — no `subServices` array. The two priced features (directory hosting and directory sharing) appear as separate keys inside the single `calculationComponents` object.
 
 ## Line-item header

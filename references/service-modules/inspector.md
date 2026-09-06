@@ -2,6 +2,16 @@
 
 Covers all Inspector v2 metering dimensions in a single line item: EC2 instance scanning, ECR container image scanning (initial + automated re-scan), Lambda function scanning, and code-repository scans (SAST, SCA, IaC, plus on-demand and change-based scans).
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| All metering dimensions at "10" (EC2, Lambda, ECR initial + re-scan, code repos), us-east-2 | capture-verified | captured saveAs (`/tmp/ct_capture_346.json`, lost) — hand total $92.65 vs stored $93.30 |
+| Per-dimension rates (EC2, Lambda, ECR, code-repo scans) | capture-verified | `pricing_client.py get-products` against `AmazonInspector`, us-east-2 |
+| The ~$0.65 (~0.7%) residual | inferred | constant across input flexes; likely a per-repo onboarding fee or SPA rounding — flag it when cent precision matters |
+| Duplicate `configSummary` label for `numberOfNewImages` vs `numberOfNewImages_continual` | inferred | looks like a calculator UI bug; re-check if `version` moves past 0.0.22 |
+| Regions other than us-east-2 | inferred | per-region rates should be re-queried |
+
 ## Line-item header
 
 ```json

@@ -2,6 +2,17 @@
 
 Single-line-item service with one or more DB instance entries inside a column-form list. Covers the DB instance(s), storage, RDS Proxy, Database Insights, backups, and Extended Support add-ons.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| On-Demand DB instance + storage (`columnFormIPM`, `TermType: "OnDemand"`) | capture-verified | `references/fixtures/amazonRDSPostgreSQLDB.json` (db.m4.2xlarge Multi-AZ, all add-ons) |
+| `storageAmount` / `storageVolume` (gp2/gp3/io1/io2/Magnetic) | capture-verified | `references/fixtures/amazonRDSPostgreSQLDB.json`; option list re-read from form 0.0.111 |
+| Add-on flags (`createRDSProxy`, `DatabaseInsightsSelected`, `addRDSExtendedSupport`, `RDSExtendedSupportYear`) | capture-verified | `references/fixtures/amazonRDSPostgreSQLDB.json` (shape); add-on rates not independently reconciled |
+| Reserved (`TermType` packed string, or the 3-field sibling encoding) | inferred | no Postgres saveAs exercises Reserved; sibling forms only — recompute-validate before emitting |
+| Backup over free tier (`retentionPeriod` > 0) | inferred | no retention-days to billable GB-month conversion captured — keep `"0"` |
+| Eight undocumented form ids (`gp3Iops`, `gp3Throughput`, `provisioningIOPS`, `provisionedIOPSIO2`, `dedicatedLogVolume`, `numberOfHoursOnES`, `additionalBackupStorage`, `snapshotExport`) | inferred | form 0.0.111 definition (2026-09-06), never round-tripped |
+
 ## Line-item header
 
 ```json

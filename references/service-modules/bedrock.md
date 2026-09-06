@@ -2,6 +2,20 @@
 
 `serviceCode` is `amazonBedrock`, `estimateFor` is `amazonBedrockClassesGroup`. **Group** service whose `subServices[]` array carries one entry per model family. The captured sub-service is for the Anthropic family (`serviceCode: anthropic`, `estimateFor: anthropic`); other model providers (Amazon, Cohere, Meta, AI21, Mistral, Stability) are separate sub-service `serviceCode` values that the SPA renders on their own forms — **not in this capture**.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Anthropic In-Region On-Demand Standard (`location: "ir"` + `tierIR: "standard"`) cc shape | capture-verified | `references/fixtures/amazonBedrock.json` (eu-west-1, $1.02) |
+| Per-1K-token rates and the monthly formula | inferred | $1.02 capture is too small to reconstruct rates — needs a higher-volume capture |
+| 30-day month constant (`x 30`, not 730 h) | inferred | unconfirmed at the captured volume |
+| Prompt-caching split (`withPromptCachingIRstan`, cache read/write) | inferred | formula likely double-counts uncached input — prefer caching disabled until reconciled |
+| Image-input fees (`imageInputIRstan` and pixel fields) | inferred | image rate tables unknown |
+| Model token resolution for models other than the captured Claude Opus 4.6 | inferred | `data/anthropic/en_US.json` form 0.0.35 option ids — right token, unproven math |
+| `selectedModel_odIRstan` | inferred | form 0.0.35 definition only; absent from the capture |
+| Other routes/tiers (Global, Geo cross-region, Batch, Provisioned Throughput) | inferred | parallel `*Geostan` / `*IRbatch` / `*batch` / `*geobatch` field sets, uncovered |
+| Non-Anthropic providers (Nova, Cohere, Meta, AI21, Mistral, Stability) | inferred | separate sub-service `serviceCode`s with their own forms — not covered |
+
 This module covers **Anthropic** + **In-Region On-Demand Standard tier** only. Other inference routes (Cross-region, Provisioned Throughput, Batch) and other tiers/feature flags use distinct sets of cc keys with different suffixes.
 
 > **Hard precondition (silent-$0 hazard).** The model and cache rates are selected by opaque tokens (`modelSelectionIRstan`, `selectedModelIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`). If any token is wrong or unknown, the SPA cannot decode it and renders the line as **$0** on the recipient's "Update" — regardless of what `serviceCost.monthly` you stored. Therefore: **only emit a Bedrock line when every token is either (a) the captured Anthropic token set below, or (b) harvested from a fresh HAR for the exact model.** After computing, assert `serviceCost.monthly > 0` for any non-zero request volume (the skill's global invariant); if it's $0 with real usage, you used a bad token — refuse the line instead. The model-name → token mapping can now be read out of `data/anthropic/en_US.json`'s labelled dropdown options (see the section below), which should give a correct token for any listed model without a HAR — **but that procedure is inferred from the form definition and is not capture-verified**: no line built from a form-resolved token has been round-tripped through the SPA. It also only fixes token *selection*; no other model's math has been validated. Treat option (b) as "harvested from a fresh HAR **or** resolved from the form definition and then proven non-zero", never as a substitute for the $0 assertion.

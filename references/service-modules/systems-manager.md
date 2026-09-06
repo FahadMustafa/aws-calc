@@ -2,6 +2,16 @@
 
 Systems Manager is a **group** service with sub-services for each priced SSM capability. The captured form covers three: Parameter Store, Automation, and Just-in-Time Node Access. Other SSM capabilities (Patch Manager, Inventory, Distributor, Run Command, OpsCenter, App Manager, Change Manager, Incident Manager) are not in this capture — add them only after capturing a HAR that includes them.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Group envelope + three sub-service shapes (eu-west-1) | capture-verified | `captures/saveAs/per-service/awsSystemsManager.json` (local capture) — group total $2,197.08 |
+| Just-in-Time Node Access (`justInTime_numberOfhours`) | capture-verified | same capture — $1.37 matches exactly; re-checked against form 0.0.9 |
+| Parameter Store formula | inferred | reconstructs $2,165 of the captured $2,195.11 — $30 gap unexplained, needs a second capture |
+| Automation formula | inferred | does not cleanly reconstruct the captured $0.60 — needs a capture with `numberOfAWSExecuteSteps=0` |
+| Patch Manager, Inventory, Distributor, Run Command, OpsCenter, App Manager, Change Manager, Incident Manager | inferred | not covered at all — capture a HAR before quoting |
+
 ## Group-level header
 
 ```json

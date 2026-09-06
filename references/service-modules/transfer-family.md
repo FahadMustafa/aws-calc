@@ -2,6 +2,14 @@
 
 Transfer Family is a **group** service. The captured form has one sub-service: **Web Apps**. The legacy SFTP/FTP/FTPS server endpoints (the original "Transfer for SFTP" product) and the protocol-specific data-transferred + user-hour SKUs are **not in this capture** — do not quote them from this module without first capturing a HAR that includes them.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Web Apps sub-service (`webApps`, `numberOfWebApps: "2"`, eu-west-1) | capture-verified | `captures/saveAs/per-service/aWSTransferForSFTP.json` (local capture) — $730 matches exactly |
+| SFTP / FTPS / FTP server endpoints | inferred | present in the form but not in the capture — refuse and capture a HAR first |
+| AS2 and SFTP connectors | inferred | not covered — refuse to quote from this module |
+
 Key naming quirk: the group `serviceCode` is `aWSTransferForSFTP` (lowercase `a`, uppercase `WS`) even though Transfer Family covers more than SFTP. Copy verbatim.
 
 ## Group-level header

@@ -2,6 +2,19 @@
 
 Covers hosted zones, DNS queries (standard / latency-based / geo / IP-based / recursive resolver / firewall), CloudTrail-style health checks (basic + four optional feature classes), Traffic Flow policy records, and Route 53 Resolver endpoints + DNS Firewall in one line item.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| cc field set, field names, and SKU mapping (all dimensions at "10", us-east-2) | capture-verified | `captures/saveAs/per-service/amazonRoute53.json` (local capture) |
+| Per-dimension rate math (hosted zones, all query classes, Traffic Flow, health checks, Resolver ENI-hours) | capture-verified | same capture — sums to $1580.01 against a stored $1596.02 ($16.02 residual, unexplained) |
+| `RRsetRecord` charge | inferred | no matching public SKU; possible per-zone record allotment |
+| `numberOfVPCs` DNS Firewall association charge | inferred | no top-level SKU exposed |
+| Health-check per-feature base charge (`numberOfFastIntervalChecks*` most likely) | inferred | candidate explanation for the residual delta |
+| `numberOFhours` as hours-per-month-per-ENI | inferred | inferred from the per-ENI hourly SKU and the captured "10" |
+| Geo intra-AWS vs external query rate split | inferred | the captured body uses a single field for all flavors |
+| DNS Security-enabled Resolver ENIs | inferred | distinct SKU exists; the captured shape has no field for it |
+
 Route 53 itself is a global service — `serviceCode` is `amazonRoute53` and most SKUs have `regionCode=""` (priced "Any"). The captured estimate still attaches a region (e.g. `us-east-2`) because Resolver endpoint, DNS Firewall, and DNS Firewall query SKUs **are** region-scoped. The hosted-zone, standard-query, LBR, geo, IP, traffic-flow, and health-check SKUs are global. Use one line item per estate; emit additional Route 53 line items only if the user wants Resolver/Firewall split across Regions.
 
 ## Line-item header

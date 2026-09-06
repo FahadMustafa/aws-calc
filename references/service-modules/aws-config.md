@@ -2,6 +2,16 @@
 
 Covers the four AWS Config metering dimensions in a single line item: continuously-recorded configuration items, periodic (daily) recordings, Config rule evaluations, and Conformance Pack evaluations. All four are tracked as monthly counts.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| All four cc dimensions at "100" (continuous CIs, periodic CIs, rule evaluations, conformance-pack evaluations), us-east-2 | capture-verified | captured saveAs body — $1.70 matches exactly |
+| Per-dimension rates | capture-verified | `pricing_client.py get-products` against `AWSConfig`, us-east-2 |
+| Tiered bands above the first band for rule / conformance-pack evaluations | inferred | the capture sits inside the first band |
+| Continuous vs periodic allocation across resource types | inferred | the calculator surfaces two independent counters and trusts the user to allocate |
+| Regions other than us-east-2 | inferred | rates are stable across most commercial regions but the tier structure has changed before |
+
 ## Line-item header
 
 ```json

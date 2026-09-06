@@ -2,6 +2,21 @@
 
 Covers AWS DRS replication charges plus the staging-area EBS volumes and EBS snapshots the service uses on the customer's behalf. Pricing is per replicating source server, plus the EBS storage that backs the staging disks and point-in-time snapshots in the target Region. Emit one line item per target Region the user is replicating into.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| `awsDrsRecoveryReplication` with `ebsVolumeType: "auto"` + `ebsVolumeCostType: "avg"` (us-east-2) | capture-verified | `captures/saveAs/per-service/awsElasticDisasterRecovery.json` — $216.04 reproduced exactly |
+| `subServices` as a JSON array `[template1, template2]` | recompute-verified | live-SPA recompute fix 2026-06 (object form breaks the SPA) |
+| `awsDrsDrill` (`template2`) `!HIDDEN` placeholder shape, monthly 0 | capture-verified | same capture |
+| Write-rate classification bands (3X..21X gp3/sc1 split) | capture-verified | `awsDrsRecoveryReplication/en_US.json` 0.0.37 math ops; closes the $216.04 total |
+| DRS replication + EBS gp3/sc1/Magnetic/snapshot rates (us-east-2) | capture-verified | `pricing_client.py get-products` for the listed usagetypes |
+| `ebsVolumeType` other than `auto` (gp3 / gp2 / st1 explicit) | inferred | math documented in the en_US template; no captured round-trip |
+| `ebsVolumeCostType` `min` / `max` | inferred | same — documented, not round-tripped |
+| Cross-region replication data transfer | inferred | no field on the form — build a separate EC2 DT line |
+| Replication-server EC2 hours | inferred | excluded from the DRS line per the SPA's own help text |
+| Regions other than us-east-2 | inferred | assumed one SKU per region with a swapped usagetype prefix |
+
 This service is modeled as a **group** in the calculator (`estimateFor: "awsDRSGroups"`) with two nested `subServices`:
 
 - `awsDrsRecoveryReplication` (`estimateFor: "template1"`) — the only one with paid components. DRS replication hours + EBS staging + EBS snapshots all roll up here.

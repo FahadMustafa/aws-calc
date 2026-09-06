@@ -2,6 +2,19 @@
 
 Covers Amazon Elastic File System: Standard storage plus Infrequent Access and Archive lifecycle tiers, with read/write data-transfer charges and Elastic Throughput. Single flat line item — no group/subServices wrapper.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Regional (multi-AZ) EFS with Elastic Throughput + IA and Archive lifecycle (us-east-2) | capture-verified | `captures/saveAs/per-service/amazonEFS.json` (local capture) — round-trips at $25.94 |
+| Storage / lifecycle / Elastic Throughput / Provisioned Throughput rates (us-east-2) | capture-verified | `pricing_client.py get-products` for the listed EFS SKUs |
+| Formula total vs the captured $25.94 (~$0.30 delta) | inferred | likely rounding plus the Percentage fields feeding transition writes — unresolved |
+| Split logic between `Percentage_of_data_*` and the explicit `_Tiering` / `_Read` GB fields | inferred | both appear in the capture; interaction undocumented in the bundle |
+| `throughputModeSS` tokens for Bursting and Provisioned | inferred | only the Elastic token is captured and the others are not enumerable from the bundle |
+| `provisionedThroughputSS` field name | inferred | taken from EFS console terminology, not a capture |
+| One Zone storage-class field names (e.g. `oneZoneStandardStorageSize`) | inferred | the captured estimate is Regional only |
+| EFS Replication (cross-region) and AWS Backup for EFS | inferred | not represented in the captured body — model separately |
+
 ## Line-item header
 
 ```json

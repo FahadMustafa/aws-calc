@@ -2,6 +2,18 @@
 
 SNS is a **group** service: the line item has `subServices: [...]` rather than top-level `calculationComponents`. Each topic type (Standard / FIFO) is its own sub-service.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Standard topic (`standardTopics`) all dimensions at 10, us-east-2 | capture-verified | captured group body (`/tmp/aws_calc_onboard/sns.json`, lost); `scripts/recompute_oracle.py` 2026-09-06 reproduces $220.92 at 0.00% |
+| FIFO topic (`fifoTopics`) with the decimal KB->GB divisor | capture-verified | same capture; oracle reproduces $10.287 vs stored $10.28 (+0.07%) |
+| Binary divisor `1_048_576` in the formula block | inferred | does not close the capture ($10.04 vs $10.28) — treat as wrong until a fresh capture says otherwise |
+| HTTP and email free bands | capture-verified | explicit $0 first tiers in `sns.json` (`HTTP 0 to 100000`, `SMTP 0 to 1000`) |
+| Mobile-push 1M/month free band | inferred | not in `sns.json`; the oracle subtracts it explicitly to match the capture and says so |
+| `simpleNotificationServiceSns_generated_23` field key | inferred | `_generated_N` is an auto-numbered form-field id; catalog probe 2026-07-13 found no match — confirm per capture |
+| Standard-request flat $0.50/M (no 1M free-tier subtraction) | capture-verified | mirrors the SPA's own behaviour in the capture, despite the API SKU carrying a free band |
+
 ## Group-level header
 
 ```json

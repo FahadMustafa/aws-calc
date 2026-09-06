@@ -2,6 +2,18 @@
 
 `serviceCode` is `amazonMQ`. Amazon MQ has multiple form templates selected by the `estimateFor` value; this module covers four configurations with different confidence levels. The "opaque token" problem this module previously had is resolved — the SPA's public pricing catalog at `calculator.aws/pricing/2.0/meteredUnitMaps/mq/USD/current/mq.json` contains the full friendly-key → `RegionlessRateCode` mapping for every (engine, mode, instance type) combination, and that `RegionlessRateCode` IS the opaque token used in cc. See §Opaque token resolution below.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| RabbitMQ Cluster (`rabbitMQBroker`, `rabbitBrokerType: "0"`) | capture-verified | `references/fixtures/amazonMQ.json` (eu-west-1, $8,167.30) |
+| RabbitMQ Single Instance (`rabbitMQBroker`, `rabbitBrokerType: "1"`) | capture-verified | live-SPA `sessionStorage` capture 2026-06 + `mq.json` catalog (numeric recompute not observable headless) |
+| ActiveMQ Single Instance (`singleInstanceBroker`, `activeBrokerType: "1"`) | inferred | form 0.0.60 definition + `mq.json` catalog — no ActiveMQ saveAs ever captured |
+| ActiveMQ Active/Standby (`singleInstanceBroker`, `activeBrokerType: "0"`, `_2` fields) | inferred | form 0.0.60 definition + `mq.json` catalog |
+| `numberOfbrokersrunningdatareplication` (CRDR) on both templates | inferred | form 0.0.60 definition (2026-09-06) |
+| Opaque instance/storage tokens (`RegionlessRateCode` lookups) | inferred | `mq.json` catalog snapshot + form 0.0.60 option ids; m7g rows not yet tabulated |
+| Data transfer array (3 `entryType` entries) | capture-verified | `references/fixtures/amazonMQ.json` (Path 1 DT entries) |
+
 > **BREAKING in form 0.0.60 — `estimateFor: "activeInstanceBroker"` no longer exists.** The live form definition ships exactly two templates, `singleInstanceBroker` and `rabbitMQBroker`. The ActiveMQ Active/Standby path documented below as Path 3 has been folded into `singleInstanceBroker`, selected by a new `activeBrokerType` dropdown (`"1"` = single-instance, `"0"` = active/standby) with its own `_2`-suffixed field set. **Do not emit `estimateFor: "activeInstanceBroker"`** — the SPA has no template to resolve it. See Path 3 for the replacement shape.
 >
 > **Also in 0.0.60: Path 2's `instanceType` / `brokerStorageType` values are opaque tokens, not the readable strings this module documented.** The live dropdown option ids are `RegionlessRateCode`s (e.g. `Single Instance mq t2.micro` → `xgy1w0xhhksiyvrKXO6-2UQQynDmqJafzIh8kqhD214`), the same tokens already tabulated below. Both flags are read from the form definition and are **not capture-verified**.

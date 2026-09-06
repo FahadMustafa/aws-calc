@@ -2,6 +2,18 @@
 
 Covers Amazon Kinesis Data Streams in three distinct modes that share one `serviceCode`. The mode is picked by the `estimateFor` value, and the calculator uses a **different set of `calculationComponents` field names per mode** (suffixes: `*` for Provisioned, `*OnDemand`, `*Advantage`). Don't mix them.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Provisioned mode (`amazonKinesisDataStreams`), us-east-2 | capture-verified | `captures/calculator.aws_new.har` (local capture) — $273.85 reproduced exactly |
+| On-Demand classic (`amazonKinesisDataStreamsOnDemand`) | capture-verified | same capture — $274.81 reproduced exactly |
+| On-Demand Advantage (`amazonKinesisDataStreamsOnDemandAdvantage`) | capture-verified | same capture — $3079.69 vs $3079.73 (rounding) |
+| Enhanced fan-out (Provisioned) | capture-verified | same capture — 10 EFO consumers priced into the $273.85 total |
+| Shard rounding at the `percentBuffer` step | inferred | only exercised at peak 10/s x 10 KB with 20% buffer (2 shards) — HAR-test multi-shard cases |
+| Retention beyond 1 day (any mode) | inferred | the day-1-included boundary is not exercised by the capture |
+| Standard consumer reads in Provisioned mode being free | inferred | no SKU charged in the capture, but not proven |
+
 ## Line-item header
 
 ```json

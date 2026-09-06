@@ -2,6 +2,14 @@
 
 Single line item covering stored secrets (per secret-month) plus API request volume. The pricing model is intentionally simple — two flat rates, no tiers, no commitment options — so the module mostly exists to lock down the exact `calculationComponents` field names and units the SPA wants.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Stored secrets + API requests (1 secret, 30-day duration, us-east-2) | capture-verified | captured saveAs body 2026-05-09 — $0.40 matches exactly |
+| Per-secret and per-request rates | capture-verified | `pricing_client.py get-products` ($0.40/secret-month, $5e-06/request, us-east-2) |
+| Partial-month prorating (`secretDuration` below 30) | inferred | read off the field name and unit; not round-tripped — capture with `secretDuration=15` first |
+
 ## Line-item header
 
 ```json

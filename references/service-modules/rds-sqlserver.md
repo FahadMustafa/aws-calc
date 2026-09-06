@@ -2,6 +2,21 @@
 
 Sibling of `rds-postgres.md`. Same column-form list pattern, but the row carries three extra fields (license model, database edition, unbundled-licensing flag) and the top-level shape adds an `optimize` toggle. There is **no** Extended Support row — SQL Server pricing rolls support into the licensed editions, so `RDSExtendedSupportYear` / `addRDSExtendedSupport` from the PostgreSQL module are intentionally absent.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Reserved 3-field encoding (`TermType: "Reserved"` + `LeaseContractLength` + `PurchaseOption`) | recompute-verified | live-SPA fragments 20.json / 105.json (2026-06); the packed string recomputes to $0.00 on Update |
+| On-Demand row (`TermType: "OnDemand"`, no Lease/Purchase fields) | recompute-verified | live-SPA fragment 30.json (2026-06, db.t3.large Web LI, $155.34) |
+| Instance + gp2 storage + Proxy + Insights + backup total (db.m6i.12xlarge BYOL) | capture-verified | captured $6,232.05 reconciled to the cent (capture file lost — re-capture needed) |
+| gp3 storage with `gp3Iops` / `gp3Throughput` | capture-verified | live-SPA fragment 20.json (4800 GB gp3) |
+| Database Insights Advanced rate ($0.0125/vCPU-hr) | inferred | reverse-derived from the captured total; not returned by the Pricing API |
+| `optimize` toggle (vCPU cores/threads) | inferred | form 0.0.134 labels contradict the older "Optimized Reads/Writes" prose; not exercised |
+| `Unbundled Licensing` value | inferred | no observed effect on cost in standard configs — treat as a label |
+| Fields the captures never exercised (`vcpuThread`, `vcpuCores`, `provisioningIOPS`, `provisionedIOPSIO2`, `additionalBackupStorage`) | inferred | form 0.0.134 definition (2026-09-06) |
+| Three captured shapes re-validated against form 0.0.134 | inferred | validated against 0.0.123 only; not re-run |
+| Oracle on the shared `rdsForOracle` form | inferred | editions/license models not captured — refuse Oracle line items |
+
 ## Line-item header
 
 ```json

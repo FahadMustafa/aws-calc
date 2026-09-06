@@ -2,6 +2,18 @@
 
 Single line item covering one or more **build-compute variants** on a single CodeBuild fleet type. The form lets the user pick a fleet `computeType` (on-demand EC2, on-demand Lambda, reserved capacity, etc.) and then add one or more `(Compute Type, Operating System)` rows inside `columnFormIPM` — each row is a separate compute-type/OS pairing. The captured slice models the **On-Demand EC2 fleet**; other fleets (Lambda, Reserved, Sandbox, Docker) have not yet been captured and are flagged below.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| On-Demand EC2 fleet (`computeType: "ondemandec2"`), single `columnFormIPM` row, us-east-2 | capture-verified | `captures/saveAs/per-service/awsCodeBuild.json` (local capture) — $0.90 matches exactly |
+| Per-build-minute rate lookup (`computeFamily=OnDemand-EC2`) | capture-verified | `pricing_client.py get-products` (SKU UB8Y5XEZW2M4GZ8Y, $0.09/min) |
+| Lambda fleet (`ondemandlambda`) | inferred | form value and per-second vs per-minute conversion unconfirmed |
+| Windows fleet (`operatingSystem: "Windows"`) | inferred | rates exist; the form value spelling is unverified |
+| Reserved capacity fleet (`reserved`) | inferred | different billing model; the current cc shape almost certainly does not match |
+| GPU (`gpu1.*`) and macOS fleets | inferred | dropdown value conventions extrapolated from the lowercase-no-separator pattern |
+| Multi-row `columnFormIPM` | inferred | array structure verified but the split semantics of builds/time across rows is unconfirmed — emit single-row only |
+
 ## Line-item header
 
 ```json

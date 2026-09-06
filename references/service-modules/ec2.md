@@ -2,6 +2,22 @@
 
 Covers EC2 compute, EBS storage, snapshots, monitoring, and EC2 data transfer in a single line item.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| On-Demand compute + gp3 storage (t3.small Windows, us-east-2) | capture-verified | `references/fixtures/ec2Enhancement.json`; reconciled to the cent by `scripts/recompute_oracle.py` ($68.62) |
+| On-Demand `utilizationValue` scaling | recompute-verified | live-SPA check 2026-06-12 (m5.xlarge Windows me-south-1, survived "Update estimate") |
+| `selectedOS: "suse"` token | recompute-verified | live-SPA check 2026-06-11 (`"sles"` silently reprices as Linux) |
+| `selectedOS: "linux"` / `"windows"` | capture-verified | `references/examples/sample-saveas-body.json` (both lines) |
+| Standard RI 3yr No Upfront (r5.large Linux) — cc shape only; $47.42 not reconciled | capture-verified | `references/fixtures/ec2Enhancement-ri.json` |
+| Other RI rows (Standard 1Y/3Y all payment options, all Convertible) | inferred | form/pricing-table shape only — no capture |
+| Savings Plans (`compute-savings-plans` / `ec2-instance-savings-plans`) | inferred | not validated end-to-end — do not emit without recompute-validating |
+| `selectedOS: "rhel"` | inferred | not present in any capture |
+| Data transfer (tiered outbound bands, cross-AZ intra-region 2x) | inferred | `references/examples/sample-saveas-body.json` DT arrays are empty — shape only, multipliers unverified |
+| gp3 provisioned IOPS / throughput surcharges | inferred | no capture provisions beyond baseline |
+| Snapshot incremental model (`retained_snapshot_gb` change-fraction) | inferred | consistent with the $0 snapshot line, but the change fraction is an assumption |
+
 ## Line-item header
 
 ```json

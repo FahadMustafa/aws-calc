@@ -2,6 +2,16 @@
 
 Single flat line item covering ECR private-registry image storage plus the data transfer associated with pulling images out of the registry. Pricing is intentionally simple: one flat per-GB storage rate, plus the standard regional outbound data transfer tiers. ECR replication, scan-on-push, and pull-through-cache costs are **not modeled** by this form — capture a fresh HAR before quoting them.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Private-registry storage + outbound DT to internet (`toRegion: "External"`, us-east-2) | capture-verified | `captures/saveAs/per-service/amazonElasticContainerRegistry.json` (local capture) — $922.60 reproduced exactly |
+| Storage rate and the four-tier outbound DT table | capture-verified | `pricing_client.py get-products` 2026-05-11 (`AmazonECR`, `AWSDataTransfer`) |
+| No 100 GB/month free-tier deduction | capture-verified | same capture — the SPA bills flat |
+| Cross-region outbound (`toRegion` set to a region code) | inferred | borrowed from the analogous EC2/S3 DT forms; never round-tripped on ECR |
+| ECR replication, image scanning, pull-through cache | inferred | not modeled by this form — quote separately |
+
 ## Line-item header
 
 ```json

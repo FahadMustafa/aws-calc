@@ -2,6 +2,16 @@
 
 ELB is a **group** service: the line item has `subServices: [...]` for each priced load-balancer type. The group `serviceCost.monthly` is the sum of its sub-services. The classic Load Balancer (CLB) is not in this form — only ALB, NLB, and GWLB.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Group envelope + three sub-service shapes (ALB / NLB / GWLB, eu-west-1) | capture-verified | `captures/saveAs/per-service/elasticLoadBalancing.json` (local capture) |
+| Network Load Balancer formula | capture-verified | same capture — reproduces $149.80 exactly |
+| Gateway Load Balancer formula | capture-verified | same capture — reproduces $73.15 within $0.15 |
+| Application Load Balancer LCU dimension handling (sum vs max across dimensions) | inferred | $222.80 only reconstructs if EC2 and Lambda byte dimensions are summed; AWS docs say max — confirm before quoting tight ALB numbers |
+| Classic Load Balancer | inferred | not in this form — a different `serviceCode`; do not slot it in here |
+
 ## Group-level header
 
 ```json

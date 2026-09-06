@@ -2,6 +2,16 @@
 
 Covers AWS Security Hub standards (compliance checks), finding ingestion from other AWS products, and automation rule evaluations in a single line item. Pricing is per-account, per-Region — a multi-account / multi-Region deployment multiplies accordingly.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| All five cc fields at "10" (checks, ingestion, automation, `noOfAccounts`), us-east-2 | capture-verified | captured saveAs body — $0.10 matches exactly |
+| Standards / findings / automation rate lookups | capture-verified | `pricing_client.py get-products` for the three `productFamily` values, us-east-2 |
+| Per-account-per-Region tier walk (tier first, then multiply by `noOfAccounts`) | inferred | both orders coincide at the captured scale, so the capture does not discriminate |
+| Multi-Region rollout (one line item per Region) | inferred | the UI exposes one Region per line item; the split is this module's guidance |
+| Regions other than us-east-2 | inferred | per-region rates should be re-queried |
+
 ## Line-item header
 
 ```json

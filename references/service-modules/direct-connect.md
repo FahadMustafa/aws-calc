@@ -2,6 +2,17 @@
 
 `serviceCode` is `awsDirectConnect`, `estimateFor` is `template`. Flat line item, no `subServices` array. Critical quirk: **the `region` field is essentially decorative — the `port:Direct Connect Location` value inside `columnFormIPM` is what drives pricing.** Port rates vary by physical Direct Connect colocation site, not by AWS region. A user can have a port at "165 Halsey Street, Newark, NJ" with the line item `region: "eu-west-1"`; pricing follows Newark, not Ireland.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Dedicated ports, single `columnFormIPM` row (2 x 100G at Newark, NJ) | capture-verified | `captures/saveAs/per-service/awsDirectConnect.json` (local capture) — $32,850.28 port-hour math matches exactly |
+| Region field being decorative (location drives pricing) | capture-verified | same capture — `region` is eu-west-1 while pricing is Newark |
+| cc key list against form 0.0.60 (including the lowercase `datatransferin`) | capture-verified | same capture; re-checked against the live definition 2026-09-06 |
+| DX egress per-GB rate (~$0.028/GB) | inferred | residual of a 10 GB capture where rounding dominates — resolve the SKU live |
+| Hosted ports (sub-1G capacities) | inferred | shape presumed identical; rates and capacity enumeration differ |
+| Multi-row `columnFormIPM` (mixed capacities or locations) | inferred | not captured; the configSummary concatenation rule is a guess |
+
 ## Line-item header
 
 ```json

@@ -2,6 +2,16 @@
 
 A single flat line item covering Web ACLs, the rules attached to them (direct rules, rule groups, rules inside groups, managed rule groups), and request volume. WAF is region-scoped; pricing is consistent across most commercial regions but always look it up per region.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| All six cc dimensions at 10 (Web ACLs, rules, rule groups, managed rules, requests), us-east-2 | capture-verified | captured saveAs body — $1356.00 reproduced exactly |
+| Web ACL / rule / request rates | capture-verified | Price List API (`awswaf`), us-east-2, 2026-05-09 |
+| Paid managed rule groups (Bot Control, Fraud Control, ATP) entity + per-request fees | inferred | not modeled by this form — capture a fresh HAR before promising numbers |
+| Request tiers (WCU 2500+, body inspection over 48 KB) | inferred | not exposed by the form; the flat $0.60/M rate is assumed |
+| Regions other than us-east-2 | inferred | pricing is consistent across most commercial regions but should be looked up per region |
+
 ## Line-item header
 
 ```json

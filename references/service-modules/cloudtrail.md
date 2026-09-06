@@ -2,6 +2,20 @@
 
 Covers the four CloudTrail metering surfaces in one line item: management/data/network-activity event recording, Insights analysis, and CloudTrail Lake ingestion + retention + query scanning. Pricing is per-Region; emit one line item per active Region.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Full cc shape, all count fields at "10" (us-east-2) | capture-verified | captured saveAs body (`/tmp/aws_calc_onboard/awsCloudTrail.json`, lost) — $67.78 reproduced exactly |
+| Management events (free first trail copy, paid extra copies) | capture-verified | same capture — $0.00 for one copy |
+| Data events (S3 + Lambda on one `USE2-DataEventsRecorded` SKU) | capture-verified | same capture — $10.00 + $10.00 |
+| Insights events (`APICallVolume`) | capture-verified | same capture — $35.00 |
+| CloudTrail Lake ingest / retention / query scanning | capture-verified | same capture — $7.50 + $5.00 + $0.23 + $0.05 |
+| Network-activity events treated as free on the first trail copy | inferred | the calculator's behaviour contradicts AWS docs, which price them from the first copy — may change |
+| Separate "$0.20/100k Lambda" data-event rate | inferred | no distinct SKU; appears to apply only to additional trail copies |
+| `dataIngestedOther` source validation | inferred | one $0.50/GB SKU; the SPA does not validate the source |
+| Regions other than us-east-2 | inferred | usagetype prefix swap assumed |
+
 ## Line-item header
 
 ```json

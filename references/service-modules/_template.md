@@ -2,6 +2,21 @@
 
 Use this template when adding a new service module. Copy to `<service-name>.md` (kebab-case based on the user-friendly name) and fill in.
 
+## Coverage
+
+Fill one row per configuration path this module covers, derived from your own Verification
+section — never a label the module cannot back up. If in doubt, `inferred`.
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| <config / sub-service / pricing mode> | recompute-verified | <live-SPA note + date> |
+| <config / sub-service / pricing mode> | capture-verified | <capture file / fixture / share URL> |
+| <config / sub-service / pricing mode> | inferred | <form definition, bundle, docs — or "—"> |
+
+Keep it to 12 rows or fewer; collapse variants (e.g. "Standard RI 1Y/3Y all payment options").
+See "Confidence vocabulary" under Verification for what each label means. Callers refuse
+`inferred` paths by default (SKILL.md step 2).
+
 ## Line-item header
 
 ```json

@@ -2,6 +2,18 @@
 
 This module covers **Amazon FSx for Windows File Server**, `estimateFor: "singleAZDeployment"` only. The `amazonFSx` serviceCode is reused by the SPA for other Windows FSx forms (e.g. `multiAZDeployment`), but those have not been captured. **Not covered**: FSx for Lustre, FSx for ONTAP (`amazonFSxForNetAppOntap` — different serviceCode), FSx for OpenZFS, and FSx Windows Multi-AZ deployments. Capture a saveAs body for each before quoting.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Single-AZ SSD (`singleAZDeployment`) storage + throughput (us-east-2) | capture-verified | `captures/saveAs/per-service/amazonFSx.json` (local capture) — $226.50 reproduced exactly |
+| `percentDeduplicationSavings` applied to storage cost | capture-verified | same capture — 50% dedup halves the storage term |
+| `ProvisionedSSDIOPS: "AutomaticIOPS"` adding zero | capture-verified | same capture |
+| `storageType` hash to label mapping | capture-verified | FSx `mappingDefinition` from `captures/calculator.aws_new_2.har` (not in bundle.js) |
+| HDD storage type | inferred | rate from the Pricing API; hash never round-tripped through a saveAs |
+| Custom (non-Automatic) `ProvisionedSSDIOPS` | inferred | documented from the Pricing API + bundle inspection, not round-tripped |
+| FSx Windows Multi-AZ, Lustre, ONTAP, OpenZFS | inferred | not covered — capture before quoting |
+
 ## Line-item header
 
 ```json

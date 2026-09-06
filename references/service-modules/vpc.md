@@ -2,6 +2,19 @@
 
 VPC is a **group** service: the line item has `subServices: [...]` for each priced VPC feature (VPN, Transit Gateway, NAT Gateway, etc.). The VPC itself is free; only its priced add-ons appear in the body.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| `publicIpv4Address` (idle + in-use) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` — $73.00 matches exactly |
+| `awsPrivateLinkVpc` (endpoints x AZs x GB) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` — $804.00 computed vs $803.10 captured (endpoint rate nuance) |
+| `dataTransferVpc` outbound + intra-region (2x cross-AZ) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` — $1126.40 = $921.60 out + $204.80 intra ($0.02/GB) |
+| `vpnConnectionVpc` (Site-to-Site VPN) — cc shape captured, hourly formula not reconciled | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` ($73/mo line; tunnel-hour nuance unresolved) |
+| `transitGatewayVpc` | inferred | shape documented from the capture/bundle; no reconciled cost in this module |
+| `networkAddressTranslationNatGatewayVpc` (NAT Gateway) | inferred | form 0.0.19 partial shape — missing `regionalNatGateway*` / `_generated_*`; refuse and offer a HAR |
+| `_generated_*` NAT token values | inferred | catalog probe 2026-07-13 returned nothing; HAR capture is the only route |
+| Other VPC sub-services (`gatewayLoadBalancerVpc`, `ipamVpc`, `networkAccessAnalyzerVpc`, `reachabilityAnalyzerVpc`, `trafficMirroringVpc`, `vpcRouteServer`, `cloudWan`) | inferred | manifest key names only — capture a HAR before pricing |
+
 ## Group-level header
 
 ```json

@@ -2,6 +2,20 @@
 
 AWS Backup is a **group** service: the line item has `subServices: [...]` rather than top-level `calculationComponents`. Each backup source (EFS, EBS, S3, RDS, DynamoDB, etc.) is its own sub-service with its own `calculationComponents`, even when the user only configures one source. The unused sub-services should still be present with `annualGrowthOfPrimaryUsage` and `dailyChangeOfPrimaryUsage` set to `"0"` — see the captured body for the exact shape.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Literal-percent encoding of `annualGrowthOfPrimaryUsage` / `dailyChangeOfPrimaryUsage` | recompute-verified | live-SPA frags 49 (S3 512 GB -> $48.60) and 50 (RDS 2000 GB -> $154.94), 2026-06; the fractional form collapsed the cost |
+| Group envelope + 16 sub-service `serviceCode`/`estimateFor`/`version` triples | capture-verified | `captures/saveAs/per-service/awsBackup.json` (local capture, us-east-2) |
+| `amazonEfsBackup` richest-variant shape (`dataSize`, growth/change, `*PlansWarmDays` / `*PlansColdDays`) | capture-verified | same capture; re-checked against form 0.0.47 (2026-09-06) |
+| Warm/cold rates for EFS, DynamoDB, SAP HANA, Timestream, S3, VMware | capture-verified | `pricing_client.py get-products` under `AWSBackup`, us-east-2 |
+| Group `serviceCost.monthly` formula | inferred | not round-tripped end-to-end; the SPA recomputes from cc, so the seed is informational |
+| Warm/cold rates for EBS, Aurora, Neptune, DocumentDB, Storage Gateway, FSx, RDS, Redshift | inferred | only LAGVault (or no) SKUs exposed — fall back to the source service's own snapshot SKU and flag it |
+| Aurora DSQL sub-service (empty `calculationComponents: {}`) | inferred | reproduced verbatim from the capture; no configured DSQL example observed |
+| Restores, cross-region copy, cross-account copy | inferred | no `calculationComponents` field for any of them in the capture |
+| EKS as a backup source | inferred | Pricing API has `backupresourcetype=EKS-Namespace`; the form does not expose it |
+
 > [!WARNING]
 > **Percentage fields store the LITERAL percent value, NOT a fraction.** The `annualGrowthOfPrimaryUsage` and `dailyChangeOfPrimaryUsage` "%" inputs (and any other "%"-unit field) take the number the user types into the calculator's percent box: **10% annual growth ⇒ `"10"`**, **3% daily change ⇒ `"3"`**. Do **not** divide by 100 and store `"0.1"` / `"0.03"`. The OLD fractional form recomputes to near-zero growth/change on "Update estimate" (the SPA reads `"0.1"` as 0.1%, ~zero), collapsing the cost. See the **Recompute fix (2026-06, live-SPA verified)** note below.
 

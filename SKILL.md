@@ -74,6 +74,12 @@ For each unique `serviceCode` in your line-item list, read the matching file und
 - How to compute monthly cost from the rate(s) and the user's configuration
 
 Do not skip this — modules carry hard-won shape details that you cannot reconstruct from the body schema alone.
+
+Every module opens with a `## Coverage` table mapping each path it covers to `recompute-verified`, `capture-verified`, or `inferred`. Find the row for the configuration you are about to emit. **An `inferred` path is refused by default**: say which line you are dropping and why, and offer to capture a HAR (or a live-SPA recompute) to promote it. Emit it only if the user explicitly asks for best-effort, and then label that line "best-effort (inferred shape)" in the step 8 breakdown.
+
+The reason is that an inferred shape saves cleanly and fails later: the SPA accepts the POST, then recomputes the line to $0 — or rejects it as incompatible — when the recipient clicks Update. At that point the number the user quoted is already out the door, and nothing in the share URL tells them which line went wrong or how to fix it.
+
+If no row matches the configuration in front of you, treat it as `inferred`.
 </step>
 
 <step n="3" name="Look up rates via the Pricing API">
@@ -149,6 +155,7 @@ Output, in this order:
 3. Total monthly + total upfront below the table
 4. Any defaults you applied or fallbacks you took, as a brief bulleted list
    - Include a drift note here for any line item emitted despite a step 1b DRIFT: "form-version drifted (module X vs live Y) — recipient's Update may fail on this line"
+   - Label any line the user asked for on an `inferred` coverage path (step 2): "best-effort (inferred shape)"
 
 Keep this presentation concise — the user mostly wants the URL. If the breakdown gets long, fold it into a `<details>` block.
 </step>

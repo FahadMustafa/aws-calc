@@ -2,6 +2,15 @@
 
 Single line item for CodeDeploy. CodeDeploy is free for deployments to EC2, Lambda, and ECS — the only chargeable path is deployments to **on-premises** instances, billed at $0.02 per on-prem instance update. The calculator form only models the on-prem path; if a workload uses only EC2/Lambda/ECS deployments, do not add this line item (cost would be $0).
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| On-premises instance updates (10 instances x 4 deployments, us-east-2) | capture-verified | `captures/saveAs/per-service/awsCodeDeploy.json` (local capture) — $0.80 matches exactly |
+| Per-update rate | capture-verified | `pricing_client.py get-products` (SKU AUS7RDUXSK33Y676, $0.02 per on-prem update) |
+| Two-field cc shape against form 0.0.37 | capture-verified | live form definition re-read 2026-09-06 — no cc-relevant change |
+| EC2 / Lambda / ECS deployment paths | inferred | free per AWS pricing and absent from the form — re-verify if a future capture surfaces keys for them |
+
 ## Line-item header
 
 ```json

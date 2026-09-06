@@ -2,6 +2,21 @@
 
 Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and ElastiCache Serverless in a single line item. The captured form exposes three columnar sub-forms — `columnFormIPM` (primary cluster), `columnFormIPMDT` (a second cluster, typically the data-tiered / replica variant), and `columnFormIPM_dsp` (Serverless / "design point" cluster) — plus four scalar "average usage" fields used to estimate Serverless ECPUs and data transfer.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Node-based Redis OSS On-Demand, two `columnFormIPM` clusters (us-east-2) | capture-verified | `captures/saveAs/per-service/amazonElastiCache.json` (local capture) — cc shape verbatim |
+| Node-hour / snapshot / Serverless ECPU / Serverless storage SKU shapes | capture-verified | `pricing_client.py get-products` for `cache.m5.xlarge` and `cache.r6gd.12xlarge`, us-east-2 |
+| Serverless math (`processingUnitCount_v2`, `AvgCacheDataSize_v2`, `AvgDataTransfer_v2`) | inferred | ~$18,339/mo of the $87,106.81 capture does not decompose into published rates — best-effort only |
+| Cross-AZ replication data transfer | inferred | no dedicated cc field; the SPA appears to derive it |
+| Reserved Cache Nodes (`TermType` packed string) | inferred | pattern borrowed from RDS; proven to collapse on sibling forms — refuse until an RI HAR exists |
+| Reserved upfront-vs-recurring split | inferred | read off the Pricing API response shape, not a Reserved saveAs |
+| `EngineType` tokens for Valkey and Memcache | inferred | form 0.0.87 option ids; Memcache shares the Redis OSS id, so the token does not distinguish them |
+| `AvgCacheDataSize_nonval_v2` (the Valkey-mode scalar) | inferred | form 0.0.87 definition only |
+| Single-cluster shape (zero-node `columnFormIPMDT` placeholder) and empty Serverless (`processingUnitCount_v2: "0"`) | inferred | the capture always carries two real rows and "100" |
+| Redis Enterprise Cloud | inferred | not an option in form 0.0.87 — Marketplace, refuse |
+
 > Redis Enterprise Cloud on AWS is a Marketplace product priced separately; it is **not** modelled by this `serviceCode`. Don't try to route Redis Enterprise briefs through this module — say so and offer to skip or capture a HAR.
 
 ## Line-item header

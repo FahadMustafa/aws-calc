@@ -2,6 +2,19 @@
 
 Single line item covering the EKS **control plane** (Standard Support + Extended Support), **EKS Hybrid Nodes** vCPU billing, and the **EKS platform-capabilities add-ons** (Argo CD, ACK, KRO). EKS worker nodes on EC2 are **not** modeled here — bill those as a separate EC2 line item. Fargate pods on EKS are **not** modeled here either — use the `awsFargate` module for those.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Control plane Standard + Extended Support (us-east-2) | capture-verified | `captures/saveAs/per-service/awsEks.json` (local capture, 2026-05-11) — $73.00 + $365.00 |
+| Hybrid Nodes at tier 1 (7,300 vCPU-hr) | capture-verified | same capture — $146.00 |
+| Capabilities add-ons (Argo CD + ACK + KRO, all non-zero) | capture-verified | same capture — $301.56 + $36.00 + $36.00; total $957.57 within $0.01 |
+| Per-component rates (Pricing API and `eks.json` runtime feed agree) | capture-verified | `pricing_client.py get-products` + `meteredUnitMaps/eks/USD/current/eks.json` |
+| Hybrid Nodes tiers 2-5 | inferred | rates known, but the SPA's tiered walk is only round-tripped at tier 1 |
+| A single capability enabled with the others at "0" | inferred | assumed to zero those lines; not separately captured |
+| EKS Auto Mode | inferred | no `*AutoMode*` cc fields in the capture — field names unknown |
+| EKS on EC2 worker nodes / on Fargate pods | inferred | not modeled here — emit `ec2Enhancement` or `awsFargate` lines instead |
+
 ## Line-item header
 
 ```json

@@ -2,6 +2,20 @@
 
 One flat line item that covers the entire CloudWatch surface area in the calculator: custom + detailed metrics, the three metric-fetch API families, all four alarm classes, dashboards, Logs (standard + IA, custom + vended), Logs delivered to S3 (with optional Parquet conversion), Logs Insights queries, Synthetics canaries, web + mobile RUM, Contributor Insights (CloudWatch + DynamoDB rules and events), Lambda Insights, and Database Insights (vCPU- and ACU-hour).
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| cc field set and field names (every dimension exercised, us-east-2) | capture-verified | `captures/saveAs/per-service/amazonCloudWatch.json` (local capture) |
+| Per-dimension `usagetype` -> SKU mapping (metrics, API requests, alarms, Logs, Logs Insights, Synthetics, RUM, Contributor Insights) | capture-verified | rates pulled live via `pricing_client.py` for us-east-2 usagetypes |
+| Aggregate monthly total ($222.05) | inferred | not reproduced end-to-end — needs the SPA's internal RUM byte factor and engine selection |
+| Dashboards flat $3.00/dashboard-month | inferred | AWS public pricing page; no `productFamily=Dashboard` SKU in tested regions |
+| Mobile RUM payload sizing (`numberOfMobileEvents` -> OTEL GB) | inferred | byte-per-event conversion is not Price-List-derived |
+| Lambda Insights cost path | inferred | internal multipliers not exposed via the Pricing API |
+| `numberOfvCPUs_Aurora` per-engine rate selection | inferred | one bucket spans RDS/Aurora Provisioned; the form picks the engine internally |
+| `numberOfACUs_AuroraLmitless` rate path | inferred | not exercised in the captured body |
+| Regions other than us-east-2 | inferred | usagetype prefix swap assumed (`USE1-`, `EUW1-`, ...) |
+
 CloudWatch is **not** a group/subServices line item — every dimension is a sibling field under one `calculationComponents` object. The free tier is enforced by the SPA on the recipient's side; you don't subtract it explicitly when computing `serviceCost`, but the SPA's recomputation will, so set values realistically rather than padding.
 
 ## Line-item header

@@ -2,6 +2,17 @@
 
 Covers Amazon Simple Queue Service: Standard, FIFO, and Fair queue request charges, plus an EC2-style data-transfer block. One flat line item — no sub-services, no group wrapper.
 
+## Coverage
+
+| Path | Confidence | Anchor |
+|---|---|---|
+| Standard / FIFO / Fair queue requests at 10M each (us-east-2) | capture-verified | captured saveAs (`/tmp/aws_calc_onboard/amazonSimpleQueueService.json`, lost) — $10.00 reproduced exactly |
+| Fair-queue SKU (`queueType=Fair`, flat $0.10/M) | capture-verified | `pricing_client.py get-products --filter queueType=Fair` |
+| Standard requests billed flat with no free-tier deduction | capture-verified | same capture (Tier 1, no deduction applied) |
+| `dataTransfer` block with empty `fromRegion`/`toRegion` ($0) | capture-verified | same capture — reproduces the empty-destination $0 trap, not a pass for real egress |
+| Data transfer with a real destination | inferred | no capture prices a non-empty destination on this form |
+| cc shape against form 0.0.51 | inferred | key list re-read from the live definition; prose, formula and rates not re-verified against a fresh capture |
+
 ## Line-item header
 
 ```json
