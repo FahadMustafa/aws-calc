@@ -9,7 +9,7 @@ Sibling of `rds-postgres.md`. Same column-form list pattern, but the row carries
 | Reserved 3-field encoding (`TermType: "Reserved"` + `LeaseContractLength` + `PurchaseOption`) | recompute-verified | live-SPA fragments 20.json / 105.json (2026-06); the packed string recomputes to $0.00 on Update |
 | On-Demand row (`TermType: "OnDemand"`, no Lease/Purchase fields) | recompute-verified | live-SPA fragment 30.json (2026-06, db.t3.large Web LI, $155.34) |
 | Instance + gp2 storage + Proxy + Insights + backup total (db.m6i.12xlarge BYOL) | capture-verified | captured $6,232.05 reconciled to the cent (capture file lost — re-capture needed) |
-| gp3 storage with `gp3Iops` / `gp3Throughput` | capture-verified | live-SPA fragment 20.json (4800 GB gp3) |
+| gp3 storage with `gp3Iops` / `gp3Throughput` | capture-verified | live-SPA fragment 20.json (4800 GB gp3) — field presence observed, but the gp3 rates were never reconciled against the fragment's total, so this stays below the Reserved row's label |
 | Database Insights Advanced rate ($0.0125/vCPU-hr) | inferred | reverse-derived from the captured total; not returned by the Pricing API |
 | `optimize` toggle (vCPU cores/threads) | inferred | form 0.0.134 labels contradict the older "Optimized Reads/Writes" prose; not exercised |
 | `Unbundled Licensing` value | inferred | no observed effect on cost in standard configs — treat as a label |

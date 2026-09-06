@@ -8,7 +8,7 @@ Single line item covering the EKS **control plane** (Standard Support + Extended
 |---|---|---|
 | Control plane Standard + Extended Support (us-east-2) | capture-verified | `captures/saveAs/per-service/awsEks.json` (local capture, 2026-05-11) — $73.00 + $365.00 |
 | Hybrid Nodes at tier 1 (7,300 vCPU-hr) | capture-verified | same capture — $146.00 |
-| Capabilities add-ons (Argo CD + ACK + KRO, all non-zero) | capture-verified | same capture — $301.56 + $36.00 + $36.00; total $957.57 within $0.01 |
+| Capabilities add-ons (Argo CD + ACK + KRO, all non-zero) | capture-verified | same capture — $301.56 + $36.00 + $36.00; total $957.58 within $0.01 |
 | Per-component rates (Pricing API and `eks.json` runtime feed agree) | capture-verified | `pricing_client.py get-products` + `meteredUnitMaps/eks/USD/current/eks.json` |
 | Hybrid Nodes tiers 2-5 | inferred | rates known, but the SPA's tiered walk is only round-tripped at tier 1 |
 | A single capability enabled with the others at "0" | inferred | assumed to zero those lines; not separately captured |

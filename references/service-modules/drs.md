@@ -7,7 +7,7 @@ Covers AWS DRS replication charges plus the staging-area EBS volumes and EBS sna
 | Path | Confidence | Anchor |
 |---|---|---|
 | `awsDrsRecoveryReplication` with `ebsVolumeType: "auto"` + `ebsVolumeCostType: "avg"` (us-east-2) | capture-verified | `captures/saveAs/per-service/awsElasticDisasterRecovery.json` — $216.04 reproduced exactly |
-| `subServices` as a JSON array `[template1, template2]` | recompute-verified | live-SPA recompute fix 2026-06 (object form breaks the SPA) |
+| `subServices` as a JSON array `[template1, template2]` | capture-verified | live-SPA load-parse check 2026-06; object form breaks estimate load |
 | `awsDrsDrill` (`template2`) `!HIDDEN` placeholder shape, monthly 0 | capture-verified | same capture |
 | Write-rate classification bands (3X..21X gp3/sc1 split) | capture-verified | `awsDrsRecoveryReplication/en_US.json` 0.0.37 math ops; closes the $216.04 total |
 | DRS replication + EBS gp3/sc1/Magnetic/snapshot rates (us-east-2) | capture-verified | `pricing_client.py get-products` for the listed usagetypes |

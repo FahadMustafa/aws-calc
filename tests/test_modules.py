@@ -46,7 +46,7 @@ def coverage_rows(text: str) -> list[list[str]]:
 
 
 def test_modules_directory_is_populated():
-    assert len(MODULE_PATHS) >= 41
+    assert len(MODULE_PATHS) >= 42
 
 
 @pytest.mark.parametrize("path", MODULE_PATHS + [TEMPLATE_PATH], ids=lambda p: p.name)
