@@ -8,7 +8,7 @@ Single line item for CodeDeploy. CodeDeploy is free for deployments to EC2, Lamb
 {
   "serviceCode":  "awsCodeDeploy",
   "estimateFor":  "CodeDeployTemplate",
-  "version":      "0.0.32",
+  "version":      "0.0.37",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "AWS CodeDeploy",
@@ -83,3 +83,5 @@ If the user mentions CI/CD targeting only EC2, Lambda, or ECS, **do not add a Co
 - Pricing API filters above verified via `pricing_client.py get-products` against the live API: returns SKU `AUS7RDUXSK33Y676` with rate `$0.02` per on-prem instance update (unit `OnPremUpdates`) for `regionCode=us-east-2`.
 - Formula verified: `10 on-prem instances × 4 deployments/month × $0.02 = $0.80`, which matches the captured `serviceCost.monthly` of `$0.80` exactly.
 - EC2 / Lambda / ECS deployment paths are not modeled here — they are free per AWS pricing and the calculator form has no inputs for them. If a future capture surfaces additional `calculationComponents` keys for non-on-prem deployments, re-verify before relying on this module for those workloads.
+
+- **Form 0.0.32 → 0.0.37 (2026-09-06).** Diffed against the live form definition (`data/awsCodeDeploy/en_US.json`, version `0.0.37`). Template `CodeDeployTemplate` defines `numberOfOnPremInstances` (numericInput, form default `10`), `numberOfDeployments` (frequency, form default `4`, output frequency `perMonth`), plus a display-only `codeDeploy_bodyText` block that is not a cc key. That matches the documented two-field shape. **No cc-relevant change**: fields added: none, renamed: none, removed: none. Version pin bumped only.

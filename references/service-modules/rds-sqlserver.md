@@ -8,7 +8,7 @@ Sibling of `rds-postgres.md`. Same column-form list pattern, but the row carries
 {
   "serviceCode":  "amazonRDSForSQLServer",
   "estimateFor":  "rdsForOracle",
-  "version":      "0.0.123",
+  "version":      "0.0.134",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon RDS for SQL server",
@@ -20,7 +20,7 @@ Sibling of `rds-postgres.md`. Same column-form list pattern, but the row carries
 
 ## Recompute fragility & combo validation (read before emitting)
 
-> **Recompute fix (2026-06, live-SPA verified).** Reserved pricing must be encoded as **three separate row fields** — `TermType: "Reserved"`, `LeaseContractLength: "1yr"`, `PurchaseOption: "No Upfront"` — exactly as the live form emits them. The earlier module documented a single packed string `TermType: "Reserved-1yr-No-Upfront-Standard"`; the SPA does **not** recognize that value, so on "Update estimate" the line silently recomputed to **$0.00**. This was confirmed against three fragments captured from the live calculator.aws SPA (`20.json` Multi-AZ, `105.json` Single-AZ, `30.json` On-Demand). Other corrections from the same capture, now reflected throughout this module: `storageAmount.unit` is `"gb|NA"` (it was previously thought to be `"gb"`); the form emits `gp3Iops` and `gp3Throughput` components when `storageType` is GP3; `createRDSProxy` and `DatabaseInsightsSelected` are present even when off; and `version` is `0.0.123`. Note that `estimateFor: "rdsForOracle"` was **correct** and was never the bug — do not "fix" it.
+> **Recompute fix (2026-06, live-SPA verified).** Reserved pricing must be encoded as **three separate row fields** — `TermType: "Reserved"`, `LeaseContractLength: "1yr"`, `PurchaseOption: "No Upfront"` — exactly as the live form emits them. The earlier module documented a single packed string `TermType: "Reserved-1yr-No-Upfront-Standard"`; the SPA does **not** recognize that value, so on "Update estimate" the line silently recomputed to **$0.00**. This was confirmed against three fragments captured from the live calculator.aws SPA (`20.json` Multi-AZ, `105.json` Single-AZ, `30.json` On-Demand). Other corrections from the same capture, now reflected throughout this module: `storageAmount.unit` is `"gb|NA"` (it was previously thought to be `"gb"`); the form emits `gp3Iops` and `gp3Throughput` components when `storageType` is GP3; `createRDSProxy` and `DatabaseInsightsSelected` are present even when off; and `version` was `0.0.123` at the time (the live form has since moved to `0.0.134` — see the Verification section). Note that `estimateFor: "rdsForOracle"` was **correct** and was never the bug — do not "fix" it.
 
 This is the most recompute-fragile service in the skill. Oracle **and** SQL Server share the one `rdsForOracle` form, so a single brittle code path breaks both. Three structural traps make the recipient's "Update" fail (either with *"This service in your estimate isn't compatible with your original inputs"*, or silently recomputing to **$0.00**):
 
@@ -128,7 +128,31 @@ SQL-Server-specific:
 - `storageType` replaces postgres's `storageVolume` (same role, different field name). Accepted display values match the Pricing API `volumeType` strings.
 - `gp3Iops` / `gp3Throughput` — emitted only when `storageType` is `"General Purpose-GP3"`. Baselines are `"3000"` IOPS and `"125"` mbps (`gp3Throughput.unit` is `"mbps"`). Omit both entirely for gp2/io1/io2/magnetic.
 - `storageAmount.unit` is the literal `"gb|NA"`, not `"gb"`.
-- `additionalBackupStorage` did not appear in any of the live captures; the SPA derives backup from `retentionPeriod`. Include it only if you have separately confirmed the live form emits it.
+- `additionalBackupStorage` did not appear in any of the live captures; the SPA derives backup from `retentionPeriod`. It **does** exist in form 0.0.134 (subType `fileSize`, `defaultOption {size: "gb", frequency: "NA"}` → unit `"gb|NA"`, no displayIf gate), so the field name is real — but no capture has ever round-tripped it. Send it only when the user has backup storage beyond the retention window, and recompute-validate.
+
+### Fields present in form 0.0.134 that no capture exercised
+
+These are read from the live form definition, **inferred, not capture-verified**. Emit them only when the condition that gates them is true, and recompute-validate the line afterwards.
+
+```jsonc
+{
+  // Optimize CPU — only rendered when `optimize` is "1". The `optimize` dropdown's real
+  // labels are "Configure the number of vCPUs" ("1") and "Default CPU options" ("0"),
+  // so it is a CPU-configuration toggle, not the Optimized Reads/Writes flag the prose
+  // above calls it. Both fields have form default 0.
+  "vcpuThread":         {"value": "2"},    // threads per CPU core
+  "vcpuCores":          {"value": "8"},    // CPU cores
+
+  // Provisioned-IOPS inputs, each gated on the matching `storageType` value.
+  // Both have form default 1000.
+  "provisioningIOPS":   {"value": "1000"}, // only when storageType == "Provisioned IOPS"   (io1)
+  "provisionedIOPSIO2": {"value": "1000"}, // only when storageType == "Provisioned IOPS-IO2" (io2)
+
+  "additionalBackupStorage": {"value": "0", "unit": "gb|NA"}
+}
+```
+
+`storageType`'s five live option ids are `General Purpose` (gp2), `General Purpose-GP3`, `Provisioned IOPS` (io1), `Provisioned IOPS-IO2` (io2), `Magnetic` — matching the values already documented above. Form default is `General Purpose`.
 
 ## Pricing API filters
 
@@ -289,3 +313,8 @@ Inferred (verify before relying):
 - `Unbundled Licensing` value doesn't appear to change monthly cost in standard configs; treat as a label until you capture a non-default estimate.
 - `optimize` Optimized Reads/Writes rate is not exercised here.
 - Database Insights Advanced rate ($0.0125/vCPU-hr) was reverse-derived from the captured total and matches AWS public pricing; it is NOT directly returned by the Pricing API under a "Database Insights" product family today.
+
+- **Form 0.0.123 → 0.0.134 (2026-09-06).** Diffed against the live form definition (`data/amazonRDSForSQLServer/en_US.json`, version `0.0.134`). Every documented cc key still exists with the same id: `optimize`, `createRDSProxy`, `storageAmount`, `DatabaseInsightsSelected`, `retentionPeriod`, `columnFormIPM`, `storageType`, `gp3Iops` (form default 3000), `gp3Throughput` (form default 125). Renamed: none. Removed: none.
+- Fields the live form defines that this module did not carry: `vcpuThread`, `vcpuCores` (both gated on `optimize == "1"`), `provisioningIOPS` (io1), `provisionedIOPSIO2` (io2), `additionalBackupStorage`, plus three display-only blocks (`alertId`, `alertId2`, `ebsThroughputRatioAlert`). They are now documented in a separate "not capture-verified" block above. **Eleven form versions elapsed between the pin and the live file, so these cannot be attributed to 0.0.134 specifically** — some or all may predate 0.0.123 and simply never appeared in a capture. Do not read their presence as "new in this bump".
+- Correction from the same read: the `optimize` dropdown's live labels are "Configure the number of vCPUs" / "Default CPU options", i.e. it gates the CPU-core/thread inputs. The prose above describes it as an "Optimized Reads/Writes flag"; that reading is not supported by the form definition. Left the field's documented default (`"0"`) alone — it is still the right thing to send.
+- The three captured shapes ($7929.36 / $4278.40 / $155.34) were validated against form 0.0.123 and have **not** been re-run against 0.0.134. The Reserved three-field encoding and the `"undefined"` utilization column are unchanged in the live definition.

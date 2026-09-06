@@ -8,7 +8,7 @@ Covers Amazon Simple Queue Service: Standard, FIFO, and Fair queue request charg
 {
   "serviceCode":  "amazonSimpleQueueService",
   "estimateFor":  "simpleQueueService",
-  "version":      "0.0.47",
+  "version":      "0.0.51",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon Simple Queue Service (SQS)",
@@ -144,3 +144,5 @@ If the user gives a single "messages per month" figure without specifying queue 
   - Total: $4 + $5 + $1 + $0 = $10.00. Verified within $0.00.
 - **Fair queues:** `queueType=Fair` is the newer Fair Queues feature (separate SKU from Standard, no tiering, flat $0.10/M in us-east-2 — much cheaper than the $0.40/M the brief speculated). Verified via `pricing_client.py get-products --filter queueType=Fair`.
 - Rates pulled live from `AWSQueueService` Pricing API on capture day; re-query if estimate is more than a few months old.
+
+- **Form 0.0.47 → 0.0.51 (2026-09-06).** Diffed the module's `calculationComponents` keys against the live form definition (`d1qsjq9pzbk1k6.cloudfront.net/data/amazonSimpleQueueService/en_US.json`, version `0.0.51`). Template `simpleQueueService` defines exactly four input ids — `standardQueueRequests`, `fifoQueueRequests`, `fairQueueRequests`, `dataTransfer` — which is the documented shape unchanged. **No cc-relevant change**: fields added: none, renamed: none, removed: none. Version pin bumped; the prose, formula, and rates above were not re-verified against a fresh capture.

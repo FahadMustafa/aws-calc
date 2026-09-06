@@ -4,7 +4,7 @@
 
 This module covers **Anthropic** + **In-Region On-Demand Standard tier** only. Other inference routes (Cross-region, Provisioned Throughput, Batch) and other tiers/feature flags use distinct sets of cc keys with different suffixes.
 
-> **Hard precondition (silent-$0 hazard).** The model and cache rates are selected by opaque tokens (`modelSelectionIRstan`, `selectedModelIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`). If any token is wrong or unknown, the SPA cannot decode it and renders the line as **$0** on the recipient's "Update" — regardless of what `serviceCost.monthly` you stored. Therefore: **only emit a Bedrock line when every token is either (a) the captured Anthropic token set below, or (b) harvested from a fresh HAR for the exact model.** After computing, assert `serviceCost.monthly > 0` for any non-zero request volume (the skill's global invariant); if it's $0 with real usage, you used a bad token — refuse the line instead. The model-name → token mapping is not yet reverse-engineered, so in practice this module can only price the one captured model without a new HAR.
+> **Hard precondition (silent-$0 hazard).** The model and cache rates are selected by opaque tokens (`modelSelectionIRstan`, `selectedModelIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`). If any token is wrong or unknown, the SPA cannot decode it and renders the line as **$0** on the recipient's "Update" — regardless of what `serviceCost.monthly` you stored. Therefore: **only emit a Bedrock line when every token is either (a) the captured Anthropic token set below, or (b) harvested from a fresh HAR for the exact model.** After computing, assert `serviceCost.monthly > 0` for any non-zero request volume (the skill's global invariant); if it's $0 with real usage, you used a bad token — refuse the line instead. The model-name → token mapping **is** now solved — read the labelled dropdown options straight out of `data/anthropic/en_US.json` (see "The model name → token mapping is solved" below) — so you can get a correct token for any listed model without a HAR. That fixes token *selection* only: no other model's math has been validated, so a fresh model still needs the $0 assertion and, ideally, a capture.
 
 ## Group-level header
 
@@ -28,11 +28,13 @@ This module covers **Anthropic** + **In-Region On-Demand Standard tier** only. O
 
 ### Anthropic — In-Region On-Demand Standard (`anthropic` / `estimateFor: anthropic`)
 
+> **Version anomaly: the pin here was AHEAD of live.** This module pinned `0.0.37`; the live form definition served `0.0.35` on 2026-09-06. Since versions only move forward for a given definition, the `0.0.37` the capture recorded was either taken from a build AWS later rolled back, or was never a genuine capture value. The pin has been moved **down** to `0.0.35` to match what the SPA actually serves. Treat everything downstream of that capture — the four opaque tokens, the `$1.02` monthly, the field list — as correspondingly less trustworthy than a normal captured shape; the tokens themselves were independently re-confirmed against form 0.0.35 (see below), the cost was not.
+
 ```jsonc
 {
   "serviceCode":  "anthropic",
   "estimateFor":  "anthropic",
-  "version":      "0.0.37",
+  "version":      "0.0.35",
   "region":       "<code>",
   "description":  null,
   "calculationComponents": {
@@ -73,10 +75,31 @@ Four cc fields carry opaque 43-char URL-safe-base64 tokens that the SPA derefere
 
 | Field | Purpose | Captured token | Maps to |
 |---|---|---|---|
-| `modelSelectionIRstan` | Model family selector | `IL0BVf3Bmmr22TrGlUfHnPwVaiStbtOD-UyMVzK25bg` | Anthropic (captured); other families would have different tokens |
-| `selectedModelIRstan` | Specific model within the family | `VAgU0B18jsXx-EUOFzoOdJKya4ShUCjz2HUNlOpDZLM` | (model not derivable from configSummary alone) |
-| `cacheReadIRstan` | Cache-read pricing variant | `n9r1OkCw7sahKrcm5k_dLlzEu09FwTSCVv5QwmP_Hs4` | Cache-read rate enum |
-| `cacheWriteIRstan` | Cache-write pricing variant | `mJCg-f97ByF7pKaysTOJs737vV6RxBfUYYMwhpWBEvU` | Cache-write rate enum |
+| `modelSelectionIRstan` | Model family selector | `IL0BVf3Bmmr22TrGlUfHnPwVaiStbtOD-UyMVzK25bg` | **Anthropic: Claude Opus 4.6** — resolved from form 0.0.35 |
+| `selectedModelIRstan` | Specific model within the family | `VAgU0B18jsXx-EUOFzoOdJKya4ShUCjz2HUNlOpDZLM` | **Anthropic: Claude Opus 4.6** |
+| `cacheReadIRstan` | Cache-read pricing variant | `n9r1OkCw7sahKrcm5k_dLlzEu09FwTSCVv5QwmP_Hs4` | **Anthropic: Claude Opus 4.6** (cache-read rate) |
+| `cacheWriteIRstan` | Cache-write pricing variant | `mJCg-f97ByF7pKaysTOJs737vV6RxBfUYYMwhpWBEvU` | **Anthropic: Claude Opus 4.6** (cache-write rate) |
+
+### The model name → token mapping is solved: read it from the form definition
+
+The open question this module recorded — "where does the model-name → token mapping come from?" — is answered. **Option 2 below is the right answer:** `https://d1qsjq9pzbk1k6.cloudfront.net/data/anthropic/en_US.json` (the sub-service's own form definition, ~600 KB, not the 2 KB `amazonBedrock` descriptor) carries the labelled dropdown options directly. Each of the four token fields is a dropdown whose `options[]` entries pair a human label with the token as the option `id`:
+
+```python
+import gzip, json, urllib.request
+req = urllib.request.Request(
+    "https://d1qsjq9pzbk1k6.cloudfront.net/data/anthropic/en_US.json",
+    headers={"User-Agent": "Mozilla/5.0", "Accept-Encoding": "gzip, deflate"})
+raw = urllib.request.urlopen(req, timeout=60).read()
+form = json.loads(gzip.decompress(raw) if raw[:2] == b"\x1f\x8b" else raw)
+# then walk form["templates"] for the input whose "id" is e.g. "selectedModelIRstan"
+# and read its "options": [{"label": "Anthropic: Claude Sonnet 4.5", "id": "<token>"}, ...]
+```
+
+All four captured tokens resolve to **Anthropic: Claude Opus 4.6** in form 0.0.35, which is self-consistent — the four fields are four rate dimensions of the same model. `modelSelectionIRstan` and `selectedModelIRstan` offer 18 options each; the two cache fields offer 16 (not every model supports prompt caching). Resolve the token for any other model the same way rather than capturing a HAR per model.
+
+**This resolution is read from the form definition and is not capture-verified.** It gives you the right token for a chosen model; it does not prove the rest of the cc round-trips for that model, and the caveats below still stand.
+
+There is one more field the live form defines that this module's cc block omits: **`selectedModel_odIRstan`** ("Selected Model Ondemand"), whose options use short numeric ids (`103` = Claude Haiku 3.5, `111` = Claude Opus 4.5, `117` = Claude Opus 5, …) rather than tokens. It did not appear in the capture. Inferred from the form definition, not capture-verified — do not add it to a line item without a capture that shows the SPA expects it.
 
 These tokens are `RegionlessRateCode` values from the SPA's public catalogs at:
 
@@ -181,3 +204,9 @@ If the user says "Bedrock" without specifying a model, **ask** — per-token rat
 - Only one model+cache token combination is known. Cross-region inference, Provisioned Throughput, and Batch inference paths are **NOT covered**.
 - Image-input rate tables are unknown — capture a HAR with high image volume to derive.
 - Non-Anthropic providers (Amazon Nova, Cohere, Meta, AI21, Mistral, Stability) are **NOT covered** — each is a separate sub-service `serviceCode` with its own form.
+
+- **`anthropic` form 0.0.37 → 0.0.35 (2026-09-06) — a DOWNGRADE, not a bump.** `https://d1qsjq9pzbk1k6.cloudfront.net/data/anthropic/en_US.json` reports `"version": "0.0.35"`. Fetched fresh (cache bypassed) and re-read to be sure. The module's `0.0.37` pin was ahead of the live definition, which a real capture cannot produce — either AWS rolled the definition back, or the recorded value did not come from a live saveAs. Pinned to `0.0.35` so the drift gate reflects what the SPA serves. The parent group `amazonBedrock` was at `0.0.52` and was already current; it was not touched.
+- **Form diff, cc keys only.** Every documented key exists in 0.0.35 with the same id: `location`, `tierIR`, `modelSelectionIRstan`, `selectedModelIRstan`, `avgRequestsPerMinIRstan`, `hoursPerDayAtThisRateIRstan`, `avgInputTokensPerRequestIRstan`, `avgOutputTokensPerRequestIRstan`, `imageInputIRstan`, `avgImagesPerRequestIRstan`, `avgImageLengthInPixelsIRstan`, `avgImageWidthInPixelsIRstan`, `withPromptCachingIRstan`, `cacheRateIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`. Fields added: none that this module claims; renamed: none; removed: none. The form does define one extra id in the IRstan set, `selectedModel_odIRstan`, documented above as inferred-only.
+- **All four captured tokens re-resolve cleanly in 0.0.35, all four to "Anthropic: Claude Opus 4.6".** That is the strongest evidence the capture was real even though its version string was not; four independent 43-char tokens agreeing on one model is not a coincidence. The model→token lookup procedure is documented above and replaces the "capture a HAR per model" instruction for token resolution (only for token resolution — a new model's *math* is still unvalidated).
+- `location` has three live options — `global` (form default), `geo` (Geo Cross Region Inference), `ir` (In Region) — and `tierIR` has two, `standard` and `batch`. The module's `location: "ir"` + `tierIR: "standard"` is therefore **not the form default**; the default path is Global. The form carries parallel field sets for the other paths (`*Geostan`, `*IRbatch`, `*batch`, `*geobatch` suffixes) which remain uncovered here.
+- `references/examples/groups-example-body.json` still pins `anthropic` at 0.0.37. It is a historical capture used only by the math/validation tests and was deliberately left alone; it carries the same anomaly.

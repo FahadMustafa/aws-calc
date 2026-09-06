@@ -2,13 +2,17 @@
 
 `serviceCode` is `amazonMQ`. Amazon MQ has multiple form templates selected by the `estimateFor` value; this module covers four configurations with different confidence levels. The "opaque token" problem this module previously had is resolved — the SPA's public pricing catalog at `calculator.aws/pricing/2.0/meteredUnitMaps/mq/USD/current/mq.json` contains the full friendly-key → `RegionlessRateCode` mapping for every (engine, mode, instance type) combination, and that `RegionlessRateCode` IS the opaque token used in cc. See §Opaque token resolution below.
 
+> **BREAKING in form 0.0.60 — `estimateFor: "activeInstanceBroker"` no longer exists.** The live form definition ships exactly two templates, `singleInstanceBroker` and `rabbitMQBroker`. The ActiveMQ Active/Standby path documented below as Path 3 has been folded into `singleInstanceBroker`, selected by a new `activeBrokerType` dropdown (`"1"` = single-instance, `"0"` = active/standby) with its own `_2`-suffixed field set. **Do not emit `estimateFor: "activeInstanceBroker"`** — the SPA has no template to resolve it. See Path 3 for the replacement shape.
+>
+> **Also in 0.0.60: Path 2's `instanceType` / `brokerStorageType` values are opaque tokens, not the readable strings this module documented.** The live dropdown option ids are `RegionlessRateCode`s (e.g. `Single Instance mq t2.micro` → `xgy1w0xhhksiyvrKXO6-2UQQynDmqJafzIh8kqhD214`), the same tokens already tabulated below. Both flags are read from the form definition and are **not capture-verified**.
+
 ## Coverage matrix
 
 | Path | `estimateFor` | Confidence | Anchor |
 |---|---|---|---|
 | RabbitMQ Cluster (Multi-AZ) | `rabbitMQBroker` | **Verified** end-to-end from HAR | `captures/saveAs/per-service/amazonMQ.json` |
-| ActiveMQ Single Instance | `singleInstanceBroker` | **Inferred** from `captures/bundle.js` form + catalog token table — quoteable | bundle.js + mq.json catalog |
-| ActiveMQ Active/Standby | `activeInstanceBroker` | **Inferred** from `captures/bundle.js` form + catalog token table — quoteable | bundle.js + mq.json catalog |
+| ActiveMQ Single Instance | `singleInstanceBroker` (`activeBrokerType: "1"`) | **Inferred** from `captures/bundle.js` form + catalog token table; field values re-checked against form 0.0.60 | bundle.js + mq.json catalog + form 0.0.60 |
+| ActiveMQ Active/Standby | `singleInstanceBroker` (`activeBrokerType: "0"`) — **NOT `activeInstanceBroker`; that template is gone in 0.0.60** | **Inferred** from form 0.0.60 | form 0.0.60 + mq.json catalog |
 | RabbitMQ Single Instance | `rabbitMQBroker` (`rabbitBrokerType: "1"`) | **Verified** end-to-end from live-SPA HAR | sessionStorage capture (2026-06) + mq.json catalog |
 
 When the user's brief is ambiguous (e.g. "Amazon MQ broker, m5.large"), ask which engine (ActiveMQ vs RabbitMQ) and which deployment mode (single / active-standby / cluster) — engine + mode determines which template, which token series, and which rate row in the catalog.
@@ -85,7 +89,7 @@ Line-item header:
 {
   "serviceCode":  "amazonMQ",
   "estimateFor":  "rabbitMQBroker",
-  "version":      "0.0.59",
+  "version":      "0.0.60",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon MQ",
@@ -134,13 +138,15 @@ Broker type (3-node cluster Broker), DT Inbound: <Internet|None> (<X> TB per mon
 
 ## Path 2: ActiveMQ Single Instance — `singleInstanceBroker` (Inferred)
 
-⚠ Shape inferred from `captures/bundle.js` form definition plus mq.json catalog for tokens. Field names and option ids are directly from bundle; no opaque tokens needed (ActiveMQ Single Instance uses **readable id strings** for `instanceType` and `brokerStorageType`). Round-trip a test save once to confirm the `version` value the SPA emits.
+⚠ Shape inferred from `captures/bundle.js` form definition plus mq.json catalog for tokens.
+
+> **Corrected against form 0.0.60 (2026-09-06):** this module previously claimed ActiveMQ Single Instance uses **readable id strings** for `instanceType` and `brokerStorageType`. It does not. The live dropdown option ids are the same `RegionlessRateCode` tokens tabulated in §Opaque token resolution — `instanceType` options run `xgy1w0xh…` (t2.micro) through `7vf7Rg3t…` (m5.4xlarge), and `brokerStorageType` defaults to `Watrf2j3RTOHvqFvNyHO2__jk9suw5nwtH-siXP1ch0` ("Broker Storage GB Mo", EFS). Emit the token, not the friendly key. Read from the form definition; **not capture-verified**.
 
 ```json
 {
   "serviceCode":  "amazonMQ",
   "estimateFor":  "singleInstanceBroker",
-  "version":      "<TBD — confirm on first capture>",
+  "version":      "0.0.60",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon MQ",
@@ -153,25 +159,33 @@ Broker type (3-node cluster Broker), DT Inbound: <Internet|None> (<X> TB per mon
 
 ```jsonc
 {
+  "activeBrokerType":   {"value": "1"},                             // "1" = Single-instance (form default); "0" selects Active/Standby — see Path 3
   "numberOfBrokers":    {"value": "<N>"},
-  "instanceType":       {"value": "Single Instance mq m5.large"},   // readable id string from bundle dropdown
-  "brokerStorageType":  {"value": "Broker Storage GB Mo"},          // "Broker Storage GB Mo" (EFS) or "Broker Storage Single AZ GB-Mo" (EBS, NOT supported for mq.t2.micro)
-  "storagePerBroker":   {"value": "200", "unit": "gb|NA"},          // bundle default 200 GB
+  "instanceType":       {"value": "HLZazhwFlWQWVAP40yLRU_mnrAAqfbFXoEnUQ8vO2E0"},   // RegionlessRateCode token — "Single Instance mq m5.large"
+  "brokerStorageType":  {"value": "Watrf2j3RTOHvqFvNyHO2__jk9suw5nwtH-siXP1ch0"},   // token — "Broker Storage GB Mo" (EFS, form default); EBS is "4yECRDLprMhFz4DNKwkPnhiB7MJsdz2F353VdKBw0HI" (NOT supported for mq.t2.micro)
+  "storagePerBroker":   {"value": "200", "unit": "gb|NA"},          // form default 200 GB
+
+  // Cross-region data replication broker count. Present in form 0.0.60 on BOTH
+  // MQ templates; validations.required = true, no form default, frequency field
+  // (defaultFrequency "perHour", output "perMonth"). Inferred from the form
+  // definition, not capture-verified — send "0" when CRDR is not in use.
+  "numberOfbrokersrunningdatareplication": {"value": "0", "unit": "perMonth"},
 
   "dataTransfer": { "value": [ ...same 3-entry array as Path 1... ] }
 }
 ```
 
-Valid `instanceType.value` strings — directly from bundle.js dropdown ids:
+Valid `instanceType.value` tokens — from the form 0.0.60 dropdown option ids (these are the same `RegionlessRateCode`s as the friendly-key table above):
 
 | Label | `instanceType.value` |
 |---|---|
-| `mq.t2.micro` | `Single Instance mq t2.micro` |
-| `mq.m4.large` | `Single Instance mq m4.large` |
-| `mq.m5.large` | `Single Instance mq m5.large` |
-| `mq.m5.xlarge` | `Single Instance mq m5.xlarge` |
-| `mq.m5.2xlarge` | `Single Instance mq m5.2xlarge` |
-| `mq.m5.4xlarge` | `Single Instance mq m5.4xlarge` |
+| `mq.t2.micro` | `xgy1w0xhhksiyvrKXO6-2UQQynDmqJafzIh8kqhD214` |
+| `mq.t3.micro` | `7TrHec2r24mxInPR-Bprm45ubxZ-3Ran19DAA_H7ftA` |
+| `mq.m4.large` | `i3UuD2-5BN8zq0Wfa2ljDCKbHPVmig3PlLq4CZx3v08` |
+| `mq.m5.large` | `HLZazhwFlWQWVAP40yLRU_mnrAAqfbFXoEnUQ8vO2E0` |
+| `mq.m5.xlarge` | `_GpeUBAhVeChAHST1Pjm3iyHKLCmp8z65T-oAFvdOAk` |
+| `mq.m5.2xlarge` | `jwLThnQyM2WcAWtHWrqTHNrIXA7a3umeCMg9tJYDZfU` |
+| `mq.m5.4xlarge` | `7vf7Rg3t4twRI0-i6vh73Lz3cSnpa3tdCApPHKD570I` |
 
 ### Formula (Single Instance — straight from bundle.js mathsSection)
 
@@ -192,15 +206,15 @@ Number of Brokers running (<N>), Amazon MQ Broker Instance (<mq.x.y label>), Sto
 
 ---
 
-## Path 3: ActiveMQ Active/Standby — `activeInstanceBroker` (Inferred)
+## Path 3: ActiveMQ Active/Standby — `singleInstanceBroker` + `activeBrokerType: "0"` (Inferred)
 
-Same provenance as Path 2: shape from bundle.js, tokens from mq.json catalog where applicable.
+> **`estimateFor: "activeInstanceBroker"` is GONE as of form 0.0.60 (checked 2026-09-06).** The live definition ships only `singleInstanceBroker` and `rabbitMQBroker`. Active/Standby is now a branch *inside* `singleInstanceBroker`: set `activeBrokerType: "0"` and use the `_2`-suffixed field set (`numberOfBrokers_2`, `instanceType_2`, `storagePerBroker_2`). `instanceType_2`'s form default is `kfxZ0YaiRoHs7pML7IWMBWDLefTTKVdqZUmyOtGJoMg` — the `Active Standby mq t2.micro` token from the table above, which confirms the branch maps to the Active/Standby rate series. There is no `brokerStorageType_2`: the storage type stays fixed to EFS on this branch, as previously documented. All of this is **inferred from the form definition, not capture-verified** — capture an Active/Standby HAR before quoting at scale.
 
 ```json
 {
   "serviceCode":  "amazonMQ",
-  "estimateFor":  "activeInstanceBroker",
-  "version":      "<TBD>",
+  "estimateFor":  "singleInstanceBroker",
+  "version":      "0.0.60",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon MQ",
@@ -213,25 +227,29 @@ Same provenance as Path 2: shape from bundle.js, tokens from mq.json catalog whe
 
 ```jsonc
 {
-  "numberOfBrokers":   {"value": "<N>"},                              // typically 2 for active/standby
-  "instanceType":      {"value": "Active Standby mq m5.large"},       // readable id string
-  // brokerStorageType is FIXED to "Broker Storage GB Mo" (EFS only) — bundle omits the dropdown
-  "storagePerBroker":  {"value": "<X>", "unit": "gb|NA"},
+  "activeBrokerType":    {"value": "0"},                             // "0" = Active/standby-instance Broker
+  "numberOfBrokers_2":   {"value": "<N>"},                           // typically 2 for active/standby — note the _2 suffix
+  "instanceType_2":      {"value": "7lVtnGTGLw_MCxTFas-0CZbLqyBXbwYqww8u7D2jAuo"},  // token — "Active Standby mq m5.large"
+  // there is no brokerStorageType_2 — storage is FIXED to EFS on this branch
+  "storagePerBroker_2":  {"value": "<X>", "unit": "gb|NA"},
+
+  "numberOfbrokersrunningdatareplication": {"value": "0", "unit": "perMonth"},  // shared with Path 2
 
   "dataTransfer": { "value": [ ...same 3-entry array... ] }
 }
 ```
 
-Valid `instanceType.value` strings:
+Valid `instanceType_2.value` tokens (form 0.0.60 option ids):
 
-| Label | `instanceType.value` |
+| Label | `instanceType_2.value` |
 |---|---|
-| `mq.t2.micro` | `Active Standby mq t2.micro` |
-| `mq.m4.large` | `Active Standby mq m4.large` |
-| `mq.m5.large` | `Active Standby mq m5.large` |
-| `mq.m5.xlarge` | `Active Standby mq m5.xlarge` |
-| `mq.m5.2xlarge` | `Active Standby mq m5.2xlarge` |
-| `mq.m5.4xlarge` | `Active Standby mq m5.4xlarge` |
+| `mq.t2.micro` | `kfxZ0YaiRoHs7pML7IWMBWDLefTTKVdqZUmyOtGJoMg` (form default) |
+| `mq.t3.micro` | `npxP4jMuDPI0Tsa33ciplHdXcReZI2smOX69b1Lg6C4` |
+| `mq.m4.large` | `SLebDRjZkpP_bjXHPXfEmPQiI4NudlvtieaZhTyDODU` |
+| `mq.m5.large` | `7lVtnGTGLw_MCxTFas-0CZbLqyBXbwYqww8u7D2jAuo` |
+| `mq.m5.xlarge` | `uf168aXfjL6-aRynoV2NlgtBV7ylSjUNPr5T_qbQecY` |
+| `mq.m5.2xlarge` | `szEa9FzeZ2rVziGW0DE8PENkqHUNUqXDx3WQsLQ74Og` |
+| `mq.m5.4xlarge` | `avUaVtodKfdIrt83yUrbRnlaOFydLtxyaUc_qSgP5jU` |
 
 ### Formula (Active/Standby)
 
@@ -249,7 +267,7 @@ Line-item header:
 {
   "serviceCode":  "amazonMQ",
   "estimateFor":  "rabbitMQBroker",
-  "version":      "0.0.59",
+  "version":      "0.0.60",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon MQ",
@@ -348,6 +366,11 @@ Data transfer SKUs live under `AmazonEC2`; see `vpc.md` Pricing API filters.
 ## Verification
 
 - **Path 1 (RabbitMQ Cluster)**: verified from `captures/saveAs/per-service/amazonMQ.json` (eu-west-1). `serviceCost.monthly: $8,167.30` matches `10 × 730 × $0.963 (catalog rate) + storage + DT` within tolerance.
-- **Paths 2/3 (ActiveMQ Single Instance / Active-Standby)**: shape from `captures/bundle.js` `singleInstanceBroker` and `activeInstanceBroker` templates; token table from `mq.json` catalog. Round-trip a test save once before quoting at scale.
+- **Paths 2/3 (ActiveMQ Single Instance / Active-Standby)**: shape originally taken from `captures/bundle.js`, which at that time had separate `singleInstanceBroker` and `activeInstanceBroker` templates; token table from `mq.json` catalog. **The `activeInstanceBroker` template no longer exists** — both paths were re-derived from form 0.0.60 (see the 2026-09-06 entry below). Round-trip a test save once before quoting at scale.
 - **Path 4 (RabbitMQ Single Instance)**: **verified** from a live-SPA `sessionStorage` capture (2026-06). cc uses `rabbitBrokerType: "1"`, `rabbitmqInstanceType`, `rabbitmqBrokerStorageType` (token), `rabbitmqStoragePerBroker`, `dataTransfer` — and NO broker-count field. Example: eu-central-1 mq.m5.2xlarge + EBS 1024 GB = `730 × $1.38 + 1024 × $0.119 = $1,129.26`. Numeric recompute is not observable headless (price engine doesn't run); validate the number against `mq.json` rates.
 - The full friendly→token mapping above is from a catalog snapshot; re-run `python3 scripts/resolve_token.py mq --dump-friendly` to refresh if the catalog adds new instance types or ActiveMQ CRDR variants.
+
+- **Form 0.0.59 → 0.0.60 (2026-09-06).** Diffed against the live form definition (`data/amazonMQ/en_US.json`, version `0.0.60`). Fields **added: `activeBrokerType`** (Broker type dropdown on `singleInstanceBroker`, default `"1"`), **`numberOfBrokers_2` / `instanceType_2` / `storagePerBroker_2`** (the Active/Standby branch), **`numberOfbrokersrunningdatareplication`** (cross-region data replication, on both templates); **removed: the entire `activeInstanceBroker` template** — `templates` is now exactly `["singleInstanceBroker", "rabbitMQBroker"]`. Renamed: none. All Path 1 and Path 4 cc keys are unchanged and still present.
+- **Correction, not a version change:** Path 2's `instanceType` and `brokerStorageType` were documented as readable strings (`"Single Instance mq m5.large"`, `"Broker Storage GB Mo"`). The live dropdowns use `RegionlessRateCode` tokens for both. The token tables in Paths 2 and 3 were rewritten from the form's option ids. Both paths remain **inferred from the form definition, not capture-verified**; no ActiveMQ saveAs body has ever been captured, so neither the old strings nor the new tokens were ever round-tripped.
+- The friendly→token table in §Opaque token resolution is now **incomplete**: form 0.0.60 offers `mq.m7g.medium` / `large` / `xlarge` / `2xl` / `4xl` / `8xl` / `12xl` / `16xl` for `rabbitmqInstanceType` and `rabbitmqInstanceTypeClustered`, none of which are listed there. Re-run `python3 scripts/resolve_token.py mq --dump-friendly` before quoting an m7g RabbitMQ broker.
+- `references/examples/groups-example-body.json` still pins `amazonMQ` at 0.0.59. It is a historical capture used only by the math/validation tests; it was deliberately left alone.

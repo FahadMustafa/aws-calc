@@ -8,7 +8,7 @@ Single-line-item service with one or more DB instance entries inside a column-fo
 {
   "serviceCode":  "amazonRDSPostgreSQLDB",
   "estimateFor":  "rdsForPostgreSQL",
-  "version":      "0.0.110",
+  "version":      "0.0.111",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon RDS for PostgreSQL",
@@ -26,7 +26,7 @@ Single-line-item service with one or more DB instance entries inside a column-fo
   "RDSExtendedSupportYear":    {"value": "year12"},                 // year12 (yrs 1+2) / year3 (yr 3)
   "retentionPeriod":           {"value": "0"},                      // backup retention days
   "storageAmount":             {"value": "100", "unit": "gb|NA"},
-  "storageVolume":             {"value": "General Purpose"},        // General Purpose | Provisioned IOPS | Aurora
+  "storageVolume":             {"value": "General Purpose"},        // see the corrected option list below — **"Aurora" is NOT a value of this field**
   "columnFormIPM": {                                                // one entry per DB-instance row
     "value": [
       {
@@ -49,6 +49,41 @@ Single-line-item service with one or more DB instance entries inside a column-fo
 The `columnFormIPM.value` is an array — push one entry per distinct (instance type × deployment × term) combination. Use `Number of Nodes` to multiply within a row.
 
 The `"undefined"` key is unfortunate but literal — the SPA's form schema uses it as the column id for utilization. Do not rename.
+
+### `storageVolume` values — **correction**
+
+> **`"Aurora"` is not a legal `storageVolume` value.** This module previously listed `General Purpose | Provisioned IOPS | Aurora`. Form 0.0.111's dropdown has exactly five option ids, and Aurora is not among them — Aurora is a different `serviceCode` entirely (`amazonRDSAuroraPostgreSQLCompatibleDB`, see `aurora-postgres.md`). Sending `"Aurora"` here gives the SPA a value it cannot resolve.
+
+| UI label | `storageVolume.value` |
+|---|---|
+| General Purpose SSD (gp2) | `General Purpose` (form default) |
+| General Purpose SSD (gp3) | `General Purpose-GP3` |
+| Provisioned IOPS SSD (io1) | `Provisioned IOPS` |
+| Provisioned IOPS SSD (io2) | `Provisioned IOPS-IO2` |
+| Magnetic (previous generation) | `Magnetic` |
+
+### Fields present in form 0.0.111 that no capture exercised
+
+Read from the live form definition — **inferred, not capture-verified**. Emit only when the gating condition holds, and recompute-validate.
+
+```jsonc
+{
+  // Storage sizing companions to storageVolume. Each is gated on the matching
+  // storageVolume value; the sibling rds-sqlserver.md has capture-verified gp3Iops /
+  // gp3Throughput on its own form, so those two are the safest of this group.
+  "gp3Iops":            {"value": "12000"},                // storageVolume == "General Purpose-GP3"; form default 12000
+  "gp3Throughput":      {"value": "500", "unit": "mbps"},  // same gate; form default 500
+  "provisioningIOPS":   {"value": "1000"},                 // storageVolume == "Provisioned IOPS"     (io1); form default 1000
+  "provisionedIOPSIO2": {"value": "1000"},                 // storageVolume == "Provisioned IOPS-IO2" (io2); form default 1000
+
+  "dedicatedLogVolume": {"value": "0"},                    // "1" yes / "0" no; form default "0"
+  "numberOfHoursOnES":  {"value": "730", "unit": "perMonth"},  // hours running on RDS Extended Support (frequency field)
+  "additionalBackupStorage": {"value": "0", "unit": "gb|NA"},  // backup storage beyond the retention window
+  "snapshotExport":     {"value": "0", "unit": "perMonth"}     // total GB of backup processed for export
+}
+```
+
+Note the gp3 form defaults here (12000 IOPS / 500 MiBps) differ from SQL Server's (3000 / 125) — do not copy the SQL Server baselines onto a Postgres line.
 
 ### Reserved TermType encoding — WARNING (recompute-unsafe pattern; unverified here)
 
@@ -172,6 +207,10 @@ Storage amount (<N> GB), Storage volume (<volume display>), Nodes (<N>), Instanc
 - **Backup over free tier.** No defined retention-days → billable GB-month conversion is captured (see the backup warning under Multipliers). Keep `retentionPeriod: "0"` and treat backup as `$0` until a retention>0 estimate is captured.
 - **Add-on endpoints** (RDS Proxy, Database Insights advanced): rarely-exercised — capture a HAR before claiming high accuracy on their rates.
 
+- **Form 0.0.110 → 0.0.111 (2026-09-06).** Diffed against the live form definition (`data/amazonRDSPostgreSQLDB/en_US.json`, version `0.0.111`). Every documented cc key still exists with the same id: `createRDSProxy`, `DatabaseInsightsSelected`, `addRDSExtendedSupport`, `RDSExtendedSupportYear`, `retentionPeriod`, `storageAmount`, `storageVolume`, `columnFormIPM`. **No cc-relevant change** to the documented shape: fields added: none, renamed: none, removed: none.
+- Two corrections from the same read, neither caused by this bump. (1) **`storageVolume` never had an `"Aurora"` option** — the live list is gp2/gp3/io1/io2/Magnetic; the old prose was wrong and is now flagged above. (2) Eight live input ids were undocumented (`gp3Iops`, `gp3Throughput`, `provisioningIOPS`, `provisionedIOPSIO2`, `dedicatedLogVolume`, `numberOfHoursOnES`, `additionalBackupStorage`, `snapshotExport`); they are now documented as inferred-only. Since only one form version elapsed, these almost certainly predate 0.0.110 and were simply absent from the one capture behind this module — treat them as a documentation gap being closed, not as a 0.0.111 change.
+- **`references/examples/sample-saveas-body.json` was bumped to 0.0.111.** Its Postgres line uses only `createRDSProxy`, `DatabaseInsightsSelected`, `addRDSExtendedSupport`, `RDSExtendedSupportYear`, `retentionPeriod`, `storageAmount`, `storageVolume`, `columnFormIPM` — all of which exist unchanged in 0.0.111, so the bump carries no cc risk. The example's stored `serviceCost.monthly` was not re-derived.
+- Only `TermType: "OnDemand"` remains verified on this form; the Reserved warning above is unchanged.
 ## Notes
 
 - For other RDS engines (MySQL, MariaDB, Oracle, MS SQL, Aurora variants) the SPA uses a different `serviceCode` per engine. Add a sibling module before pricing those.

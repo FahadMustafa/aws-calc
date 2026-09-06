@@ -8,7 +8,7 @@ One line item covers every paid GuardDuty dimension exposed by the calculator: f
 {
   "serviceCode":  "amazonGuardDuty",
   "estimateFor":  "template_0",
-  "version":      "0.0.75",
+  "version":      "0.0.77",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon GuardDuty",
@@ -70,7 +70,15 @@ One line item covers every paid GuardDuty dimension exposed by the calculator: f
   "ecsInstances":             {"value": "10", "unit": "perMonth"},
 
   // EC2 Runtime Monitoring — vCPU-months of EC2 instances covered.
-  "ec2Instances":             {"value": "10", "unit": "perMonth"}
+  "ec2Instances":             {"value": "10", "unit": "perMonth"},
+
+  // AI Protection — GB of AI data events analyzed per month.
+  // NEW in form 0.0.77. Inferred from the form definition, not capture-verified:
+  // subType fileSize, defaultOption {size: "gb", frequency: "month"} → unit "gb|month".
+  // The field is displayIf-gated on the `guardduty` metered-unit map carrying
+  // AquKJoDK1dc2lqKDfuB0bKsOqm6Syc7g-zViz94Oz2s, so it does not render in every region;
+  // omit the key entirely rather than sending "0" if you are unsure the region has it.
+  "aiDataEvents":             {"value": "10", "unit": "gb|month"}
 }
 ```
 
@@ -98,6 +106,7 @@ ServiceCode is `AmazonGuardDuty`. Every dimension is its own SKU keyed by `usage
 | `eksInstances` | `PaidEKSvCPUMonitored` | vCPU-Months | $1.50 / vCPU-month (0–500 tier) |
 | `ecsInstances` | `PaidFargatevCPUMonitored` | vCPU-Months | $1.50 / vCPU-month (0–500 tier) |
 | `ec2Instances` | `PaidEC2vCPUMonitored` | vCPU-Months | $1.50 / vCPU-month (0–500 tier) |
+| `aiDataEvents` | **not yet resolved** | GB | **unknown — look up before quoting** (new in form 0.0.77; no Pricing API lookup has been run for GuardDuty AI Protection) |
 
 Tiered SKUs (`vpcFlowLogs_*`, S3/EKS/EC2/Fargate, K8s, S3 events) drop sharply at higher volumes — walk the user's volume across the bands when it exceeds the first tier.
 
@@ -177,6 +186,8 @@ Reproduced against the captured `serviceCost.monthly = $90.20` in `us-east-2` wi
 
 **Hand total: $90.20** — matches the captured value exactly. Captured shape: `/tmp/aws_calc_onboard/amazonGuardDuty.json` (path was ephemeral; file lost — re-capture needed).
 
+- **Form 0.0.75 → 0.0.77 (2026-09-06).** Diffed against the live form definition (`data/amazonGuardDuty/en_US.json`, version `0.0.77`). Fields **added: `aiDataEvents`** (GuardDuty AI Protection — "AI Data Events Analyzed", subType `fileSize`, `gb|month`, region-gated on the `guardduty` metered-unit map); renamed: none; removed: none. All 17 previously documented cc keys are still present with the same ids. The new field is **inferred from the form definition, not capture-verified**, and its Pricing API SKU has not been resolved — do not quote an AI Protection line without looking the rate up first.
+- The $90.20 hand-total above was computed before AI Protection existed and does not include it; it still reconciles for the 17 original dimensions.
 ## Ambiguity worth flagging before relying on this
 
 - **`ec2Instances` / `ecsInstances` / `eksInstances` are vCPU-months, not instance counts.** The Pricing API SKU unit is `vCPU-Months` and the rates ($1.50/$0.75/$0.25 across the 500 / 5,000 vCPU tiers) match the published per-vCPU runtime monitoring fees. The calculator's UI labels these fields ambiguously, but the math only works as vCPU-months. When a user says "20 EC2 instances," multiply by the average vCPU/instance before populating.

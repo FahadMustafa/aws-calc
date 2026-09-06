@@ -8,7 +8,7 @@
 {
   "serviceCode":  "awsDirectConnect",
   "estimateFor":  "template",
-  "version":      "0.0.59",
+  "version":      "0.0.60",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "AWS Direct Connect",
@@ -115,3 +115,5 @@ If the user mentions "Direct Connect" without a location, **ask**. If they menti
 - **Hosted ports** (sub-1G capacities) are NOT covered by this capture — the shape should be identical, but the per-hour rates and capacity enumeration differ. Capture a hosted-port HAR before quoting.
 - **Multi-row `columnFormIPM` configurations** (mixed capacities or locations on the same line item) are not captured — the configSummary concatenation rule above is inferred.
 - The region/location decoupling is a real footgun: do not assume the `region` field controls pricing.
+
+- **Form 0.0.59 → 0.0.60 (2026-09-06).** Diffed against the live form definition (`data/awsDirectConnect/en_US.json`, version `0.0.60`). Template `template` defines exactly `columnFormIPM`, `utilization` (form default `730`), `dataTransferOut`, `datatransferin` — including the lowercase `datatransferin` quirk documented above. **No cc-relevant change**: fields added: none, renamed: none, removed: none. Version pin bumped only; port rates and the inferred $0.028/GB DX egress residual remain as caveated above.

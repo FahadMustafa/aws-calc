@@ -211,7 +211,7 @@
       "serviceCode": "amazonRDSPostgreSQLDB",
       "region": "us-east-2",
       "estimateFor": "rdsForPostgreSQL",
-      "version": "0.0.110",
+      "version": "0.0.111",
       "description": null,
       "serviceCost": {
         "monthly": 1249.4,
@@ -222,7 +222,7 @@
       "configSummary": "Storage amount (100 GB), Storage volume (General Purpose SSD (gp2)), Nodes (1), Instance Type (db.m4.2xlarge), Utilization (On-Demand only) (100 %Utilized/Month), Deployment Option (Multi-AZ), Pricing Model (OnDemand)"
     },
     "amazonSimpleStorageServiceGroup-3e92314f-37e8-4424-b349-14d82e8b4837": {
-      "version": "0.0.83",
+      "version": "0.0.85",
       "serviceCode": "amazonSimpleStorageServiceGroup",
       "estimateFor": "simpleStorageServiceClassesGroup",
       "region": "us-east-2",

@@ -30,7 +30,7 @@ Every supported source maps to a `(serviceCode, estimateFor, version)` triple. T
 
 | Source service | subService.serviceCode | subService.estimateFor | version | Notes |
 |---|---|---|---|---|
-| EFS | `amazonEfsBackup` | `efsBackup` | `0.0.44` | Warm + Cold tiers |
+| EFS | `amazonEfsBackup` | `efsBackup` | `0.0.47` | Warm + Cold tiers |
 | VMware | `vMwareBackup` | `vmwareBackup` | `0.0.18` | Warm + Cold tiers |
 | Timestream | `timestreamBackup` | `TsBackup` | `0.0.47` | Minimal shape; only growth + change in the capture |
 | Storage Gateway | `storageGatewayBackup` | `sgwBackup` | `0.0.8` | Warm-only in capture |
@@ -54,7 +54,7 @@ Each entry is a flat object with the same envelope. The richest variant — appe
 {
   "serviceCode":  "amazonEfsBackup",          // see catalog above
   "estimateFor":  "efsBackup",                // see catalog above
-  "version":      "0.0.44",                   // see catalog above
+  "version":      "0.0.47",                   // see catalog above
   "region":       "us-east-2",
   "description":  null,
   "calculationComponents": {
@@ -300,3 +300,5 @@ The percentage fields were corrected from **fractions to literal percents** afte
   - Cross-region copy volumes (no `calculationComponents` field present in capture)
   - Cross-account copy (no `calculationComponents` field present in capture)
   - EKS as a source (Pricing API has `backupresourcetype=EKS-Namespace` but the calculator form does not expose EKS in the capture)
+
+- **`amazonEfsBackup` form 0.0.44 → 0.0.47 (2026-09-06).** Diffed against the live form definition (`data/amazonEfsBackup/en_US.json`, version `0.0.47`). Template `efsBackup` defines `dataSize`, `annualGrowthOfPrimaryUsage`, `dailyChangeOfPrimaryUsage`, the four `*PlansWarmDays` and the four `*PlansColdDays` ids — exactly the documented richest-variant shape — plus three display-only blocks (`userInfoFirst`, `warmDays`, `coldDays`, `maxAlert`) that are not cc keys. **No cc-relevant change**: fields added: none, renamed: none, removed: none. Version pin bumped in both the catalog table and the shape block; no other sub-service pin in this module was drifted.

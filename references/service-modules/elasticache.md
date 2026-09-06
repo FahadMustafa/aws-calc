@@ -10,7 +10,7 @@ Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and E
 {
   "serviceCode":  "amazonElastiCache",
   "estimateFor":  "amazonElastiCache",
-  "version":      "0.0.81",
+  "version":      "0.0.87",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon ElastiCache",
@@ -116,9 +116,11 @@ For the node-based sub-forms (`columnFormIPM`, `columnFormIPMDT`) the captured `
 | Engine UI label | EngineType.value | Status |
 |---|---|---|
 | Redis OSS | `x4dSskWC2UA5R5dVtIkM0EjZJQKU02zll08quzox15U` | Verified (captured) |
-| Valkey | unknown | **Verify before relying on this** — capture a HAR with Valkey selected before using |
-| Memcached | unknown | **Verify before relying on this** |
-| Redis Enterprise | not modelled here | Marketplace — refuse |
+| Valkey | `3N-kN93Pj_EqF8T10vg8iOBwAqooXN7Z4emJZ0zY8i0` | **Inferred from the form definition (0.0.87), not capture-verified** |
+| Memcache | `x4dSskWC2UA5R5dVtIkM0EjZJQKU02zll08quzox15U` | **Inferred from the form definition (0.0.87), not capture-verified.** The live dropdown gives Memcache the **same** option id as Redis OSS — so `EngineType` alone does not distinguish the two. Do not treat a round-tripping Memcache line as proof it priced as Memcache |
+| Redis Enterprise | not an option in form 0.0.87 | Marketplace — refuse |
+
+The live 0.0.87 dropdown has exactly three options (Valkey / Redis OSS / Memcache) with `defaultDropDownItem` = the Redis OSS token. Selecting Valkey also changes which scalar is live: `AvgCacheDataSize_v2` is hidden and the otherwise-hidden `AvgCacheDataSize_nonval_v2` takes over. This is read from the form definition and is **not capture-verified** — capture a Valkey HAR before emitting one.
 
 ## Pricing API filters
 
@@ -273,3 +275,7 @@ When the user asks for "ElastiCache Serverless" specifically, flip the defaults:
 - Empty Serverless shape: how the SPA renders the card when `processingUnitCount_v2.value = "0"`. Captured body always carries `"100"`.
 - Cross-AZ replication math — the captured `serviceCost.monthly` ($87 106.81) does not decompose cleanly into the published On-Demand node-hour rates alone (the two clusters alone come to ~$68 767/month), so the residual ~$18 339/month is presumed to be Serverless ECPU + data storage + cross-AZ DT computed from `AvgCacheDataSize_v2` / `AvgDataTransfer_v2` / `processingUnitCount_v2`. Exact formula not confirmed; treat the Serverless math above as best-effort and re-verify against the share-URL render.
 - Reserved Cache Node upfront-vs-recurring split is documented from the Pricing API response shape but not from a captured Reserved saveAs.
+
+- **Form 0.0.81 → 0.0.87 (2026-09-06).** Diffed the documented cc keys against the live form definition (`data/amazonElastiCache/en_US.json`, version `0.0.87`). Every documented key still exists: `EngineType`, `AvgCacheDataSize`, `AvgCacheDataSize_v2`, `AvgDataTransfer`, `AvgDataTransfer_v2`, `processingUnitCount_v2`, `columnFormIPM`, `columnFormIPMDT`, `columnFormIPM_dsp`. **No cc-relevant change**: fields added: none, renamed: none, removed: none.
+- Four live input ids are *not* cc keys in this module and should stay that way: `Alert` and `dt_bodyText` are display-only, and `AvgCacheDataSize_nonval` / `processingUnitCount` / `AvgDataTransfer` / `AvgCacheDataSize` all carry `isDisabled: "true"` in 0.0.87 — they are read-only mirrors the form renders under a different engine or metered-unit condition, not user inputs. The one exception worth knowing about is `AvgCacheDataSize_nonval_v2`, which is *not* disabled and is the field the form shows in place of `AvgCacheDataSize_v2` when the engine is Valkey. Read from the form definition; **not capture-verified**.
+- `EngineType` option ids for Valkey and Memcache were read out of the same file and filled into the token table above (Memcache shares the Redis OSS id). Still **inferred, not capture-verified** — the Serverless caveat and the Reserved-`TermType` refusal above are unchanged by this bump.

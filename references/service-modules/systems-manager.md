@@ -68,7 +68,7 @@ General Automation steps are free in the AWS price list; the per-step cost shows
 {
   "serviceCode":  "justInTimeNodeAccess",
   "estimateFor":  "smJustInTimeNodeAccess",
-  "version":      "0.0.8",
+  "version":      "0.0.9",
   "region":       "<code>",
   "description":  null,
   "calculationComponents": {
@@ -176,3 +176,5 @@ If the user says "Systems Manager" without specifics, ask which capability (Para
 - Parameter Store formula reconstructs $2,165 of the captured $2,195.11 — $30 gap likely from higher-throughput-tier standard ops; **need a second capture** with API interactions = 0 to isolate the storage SKU.
 - Automation formula does NOT cleanly reconstruct the captured $0.60 — the lambda-compute-per-step cost dominates in any reasonable construction but lands above $0.60; **need a second capture** with `numberOfAWSExecuteSteps=0` to isolate playbook storage from script execution.
 - Patch Manager, Run Command, OpsCenter, Change Manager, Incident Manager — **NOT covered**. Capture HAR before quoting these.
+
+- **`justInTimeNodeAccess` form 0.0.8 → 0.0.9 (2026-09-06).** Diffed against the live form definition (`data/justInTimeNodeAccess/en_US.json`, version `0.0.9`). Template `smJustInTimeNodeAccess` defines one input id, `justInTime_numberOfhours` (lowercase `h` confirmed), plus a display-only `justInTime_Text` block that is not a cc key. **No cc-relevant change**: fields added: none, renamed: none, removed: none. Version pin bumped only. The group (`awsSystemsManager` 0.0.35), Parameter Store (0.0.25) and Automation (0.0.31) pins were already current and were not touched.
