@@ -239,9 +239,16 @@ Tenancy (Shared Instances), Operating system (<OS display>), Workload (Consisten
 
 ### Reconciliation status
 
-**Not yet done — cannot be completed from disk.** The module's formula needs a per-instance on-demand hourly rate, a gp3 per-GB-month rate, and (for the RI line) the committed Hrs rate. None of those numeric rates are on disk: there is no Pricing API cache, and the module quotes only approximate *surcharge* rates ($0.005/IOPS-mo, $0.04/MBps-mo, $0.01/GB cross-AZ) that do not apply to either captured example (neither line provisions extra IOPS/throughput or any data transfer). The Pricing API was not called (no AWS credentials assumed).
+**Reconciled 2026-09-06 for the On-Demand line, via `scripts/recompute_oracle.py`.** The rates that were previously "not on disk" come from calculator.aws's own metered unit maps, no AWS credentials needed:
 
-What *is* an on-disk consistency observation (not an arithmetic reconciliation): the t3.small line carries `snapshotFrequency: 30` yet its $68.62 is consistent with compute + 500 GB gp3 and ~$0 snapshot — evidence the SPA's snapshot model is incremental, not `GB × count`. The exact compute/EBS split is asserted, not verified against rates, because the rates are not on disk.
+- Compute: `pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-calc/<region display name>/<TermType>/<Tenancy>/<OS>/<Pre Installed S/W>/<License Model>/<Current Generation>/index.json`. **This path is not advertised in `ec2Enhancement`'s form definition** — its `mappingDefinitions` list only names `datatransfer-calc`, `ebs-calculator`, `cloudwatch`, and `dedicatedhost-calc`. The SPA's bundle assembles the `ec2-calc` path itself; `recompute_oracle.EC2_CALC_BASE` mirrors that convention (read off the live bundle 2026-09-06). Re-derive it if EC2 lines start reporting "instance type not found".
+- EBS: `ebs-calculator.json`, keyed by the **literal `storageType` cc value** — `"Storage General Purpose gp3 GB Mo"` is a catalog key, not just a label.
+
+t3.small Windows OD us-east-2 = `$0.0392/hr`; gp3 us-east-2 = `$0.08/GB-mo`. So `0.0392 x 730 x 1.00 x 1 + 0.08 x 500 x 1 = $68.616` against the sample body's stored **$68.62** — a **-0.006%** delta, i.e. reconciled to the cent. That also settles the snapshot question numerically: `snapshotFrequency: 30` contributes **$0.00**, so the SPA is not billing `GB x count` (the oracle excludes snapshots from its total and says so).
+
+The r5.large **RI line ($47.42) is still not reconciled** — the oracle reports "no oracle for pricingStrategy 'standard'" rather than guessing at how the SPA amortises the committed hourly. Treat RI lines as unverified.
+
+**Still unreconciled:** the RI/SP committed hourly, the tiered and cross-AZ data-transfer multipliers, and the gp3 provisioned-IOPS/throughput surcharges ($0.005/IOPS-mo, $0.04/MBps-mo, $0.01/GB cross-AZ). Neither captured example exercises any of them, so they remain approximate figures quoted from the pricing pages, not numbers this module has closed against a capture.
 
 ### Inferred — verify before relying on this
 

@@ -1,0 +1,47 @@
+{
+ "manifest": {
+  "ETLIngestionTriggerDate": "2026-09-04T15:40:20Z",
+  "accessType": "publish",
+  "currencyCode": "USD",
+  "esIndex": "plc-queueservice-usd-20260904154020",
+  "hawkFilePublicationDate": "2026-09-04T15:40:20Z",
+  "isMapped": "true",
+  "serviceId": "queueservice",
+  "source": "queueservice"
+ },
+ "regions": {
+  "US East (Ohio)": {
+   "FIFO first-in first-out per Requests": {
+    "RegionlessRateCode": "ASZsSak_P8ygH5uBV6WvdGxsQvHG5R6JnJMhtASvFk4",
+    "price": "0.0000005000",
+    "rateCode": "TW38AR2BPP3PKCZB.JRTCKXETXF.VXGXCWQKTY"
+   },
+   "FIFO first-in first-out per Requests Tier2": {
+    "RegionlessRateCode": "iERDfsQYT7wulmvNuJPuLkoZCZdYEoDyqdYin5dv-80",
+    "price": "0.0000004000",
+    "rateCode": "TW38AR2BPP3PKCZB.JRTCKXETXF.9JVYQWEJJY"
+   },
+   "FIFO first-in first-out per Requests Tier3": {
+    "RegionlessRateCode": "47tPmXbJzVjfZEv2_m6ZMvclVmC3fpm0Gf2IxEHabVQ",
+    "price": "0.0000003500",
+    "rateCode": "TW38AR2BPP3PKCZB.JRTCKXETXF.27HCEGFCXT"
+   },
+   "Standard per Requests": {
+    "RegionlessRateCode": "eZLEqQ5wXRy9h0rZBw_PS7VGQlhe57_6X16W-_8oXYc",
+    "price": "0.0000004000",
+    "rateCode": "9C8YFGPNBKF9HP9A.JRTCKXETXF.VXGXCWQKTY"
+   },
+   "Standard per Requests Tier2": {
+    "RegionlessRateCode": "Xd5zUEd84-_wzMw65ovHtkgug85wn4U-IEdY0kcJpJ8",
+    "price": "0.0000003000",
+    "rateCode": "9C8YFGPNBKF9HP9A.JRTCKXETXF.9JVYQWEJJY"
+   },
+   "Standard per Requests Tier3": {
+    "RegionlessRateCode": "286tZ1bfnjBrWC3m639oS_9W76Wh8V_V36tsVMFZ5Ng",
+    "price": "0.0000002400",
+    "rateCode": "9C8YFGPNBKF9HP9A.JRTCKXETXF.27HCEGFCXT"
+   }
+  }
+ },
+ "sets": {}
+}

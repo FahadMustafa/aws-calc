@@ -1,0 +1,15 @@
+{
+ "mappingDefinitions": [
+  {
+   "includeRegions": false,
+   "mappingDefinitionName": "datatransfer-calc",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/datatransfer/[currency]/current/datatransfer-calc.json"
+  },
+  {
+   "mappingDefinitionName": "s3",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/s3/[currency]/current/s3.json"
+  }
+ ],
+ "serviceCode": "awsS3DataTransfer",
+ "version": "0.0.27"
+}

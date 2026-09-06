@@ -1,0 +1,32 @@
+{
+ "manifest": {
+  "ETLIngestionTriggerDate": "2026-08-31T09:22:25Z",
+  "accessType": "publish",
+  "currencyCode": "USD",
+  "esIndex": "plc-s3-usd-20260831092225",
+  "hawkFilePublicationDate": "2026-08-31T09:22:25Z",
+  "isMapped": "true",
+  "serviceId": "s3",
+  "source": "s3-standard"
+ },
+ "regions": {
+  "US East (Ohio)": {
+   "Standard Storage First 50 TB per GB Mo": {
+    "RegionlessRateCode": "p4bzR3TnNAZ1pIxclJhB2U2uxj0OxddXC0xTvc2xErU",
+    "price": "0.0230000000",
+    "rateCode": "YPGKVRB2EKTVDJDT.JRTCKXETXF.PGHJ3S3EYE"
+   },
+   "Standard Storage Next 450 TB per GB Mo": {
+    "RegionlessRateCode": "oatV7h4q7XJrvOr1pdktezIoBWEPEbkFouy2Sa7V_xM",
+    "price": "0.0220000000",
+    "rateCode": "YPGKVRB2EKTVDJDT.JRTCKXETXF.D42MF2PVJS"
+   },
+   "Standard Storage Over 500 TB per GB Mo": {
+    "RegionlessRateCode": "1CDYeQmTv2vVMa0QibwBae3UovdWq9iLJMXpl5GAJyc",
+    "price": "0.0210000000",
+    "rateCode": "YPGKVRB2EKTVDJDT.JRTCKXETXF.PXJDJ3YRG3"
+   }
+  }
+ },
+ "sets": {}
+}

@@ -1,0 +1,15 @@
+{
+ "mappingDefinitions": [
+  {
+   "includeRegions": false,
+   "mappingDefinitionName": "sns-addons",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/sns/[currency]/current/sns-addons.json"
+  },
+  {
+   "mappingDefinitionName": "sns",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/sns/[currency]/current/sns.json"
+  }
+ ],
+ "serviceCode": "fifoTopics",
+ "version": "0.0.44"
+}

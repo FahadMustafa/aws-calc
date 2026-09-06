@@ -52,40 +52,10 @@ The fetched catalog is cached in ~/.cache/aws-calc/<service>.json; pass
 from __future__ import annotations
 
 import argparse
-import gzip
-import json
-import os
 import re
 import sys
-import urllib.request
-import zlib
-from pathlib import Path
 
-CATALOG_URL = "https://calculator.aws/pricing/2.0/meteredUnitMaps/{service}/USD/current/{service}.json"
-CACHE_DIR = Path(os.environ.get("AWS_CALC_CACHE", str(Path.home() / ".cache" / "aws-calc")))
-
-
-def fetch_catalog(service: str, *, refresh: bool = False) -> dict:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_path = CACHE_DIR / f"{service}.json"
-    if cache_path.exists() and not refresh:
-        with cache_path.open() as fh:
-            return json.load(fh)
-    url = CATALOG_URL.format(service=service)
-    print(f"fetching {url}", file=sys.stderr)
-    req = urllib.request.Request(url, headers={"Accept-Encoding": "gzip, deflate"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        raw = resp.read()
-        enc = resp.headers.get("Content-Encoding", "")
-    if enc == "gzip" or (raw[:2] == b"\x1f\x8b"):
-        raw = gzip.decompress(raw)
-    elif enc == "deflate":
-        raw = zlib.decompress(raw)
-    text = raw.decode("utf-8")
-    data = json.loads(text)
-    with cache_path.open("w") as fh:
-        json.dump(data, fh)
-    return data
+from catalog import CACHE_DIR, CATALOG_URL, fetch_catalog  # noqa: F401  (re-exported)
 
 
 def is_friendly_key(key: str) -> bool:

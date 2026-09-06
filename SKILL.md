@@ -128,6 +128,13 @@ Curl the load endpoint for the new key (`https://d3knqfixx3sbls.cloudfront.net/<
 
 Report: `Saved + load-confirmed: load endpoint returns [N] bytes. (Storage verified; recompute not tested — see step 8 invariant.)`
 
+**Then run the recompute oracle on the body file:** `python3 scripts/recompute_oracle.py <path to the body>`. For every line item whose `serviceCode` has a registered recomputer it re-derives `serviceCost.monthly` from calculator.aws's own metered unit maps and prints a per-line table (key, stored, recomputed, delta, delta %). Include that table in the step 8 report.
+
+- Exit **0**: every oracle-covered line is within ±1%.
+- Exit **1**: at least one covered line is outside ±1% — **this blocks handoff**. Fix the arithmetic (or the cc shape feeding it) and re-save; do not hand over the URL with a known bad number. If you conclude the oracle is the thing that is wrong, say so explicitly with the numbers, and fix the oracle rather than raising `--tolerance`.
+- Lines reported as **"no oracle"** (Reserved Instances, Savings Plans, and any `serviceCode` not in `ORACLES`) are **unverified, not verified** — the oracle deliberately refuses to guess. Say so in the breakdown rather than implying they were checked.
+- The `!` notes under a row name what the oracle left out of its own total (an unmodelled snapshot, an inter-region transfer). A note means the recomputed figure is a floor, not a full number.
+
 For services with known-fragile recompute paths (RDS for Oracle / SQL Server — see those modules) or opaque tokens (Bedrock, Amazon MQ), recompute-validate before handing over: drive the live SPA headlessly (Playwright, via the `webapp-testing` skill), open the share URL, click **Update**, and assert no "incompatible with your original inputs" error and that every non-zero-usage line still shows a non-zero cost. If that validation fails with *"This service in your estimate isn't compatible with your original inputs"* (or a recipient reports the same), run `scripts/check_versions.py` first to check for form-version drift between the module-pinned `version` and live calculator.aws — a drifted form is a more likely cause than the cc shape, and the fix is to bump the module version rather than rework the shape.
 </step>
 

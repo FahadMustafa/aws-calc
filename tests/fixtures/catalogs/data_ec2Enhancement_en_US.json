@@ -1,0 +1,23 @@
+{
+ "mappingDefinitions": [
+  {
+   "mappingDefinitionName": "datatransfer-calc",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/datatransfer/[currency]/current/datatransfer-calc.json"
+  },
+  {
+   "mappingDefinitionName": "ebs-calculator",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/ec2/[currency]/current/ebs-calculator.json"
+  },
+  {
+   "mappingDefinitionName": "cloudwatch",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/cloudwatch/[currency]/current/cloudwatch.json"
+  },
+  {
+   "mappingDefinitionName": "dedicatedhost-calc",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/ec2/[currency]/current/dedicatedhost-calc/metadata.json",
+   "mappingDefinitionVersion": "PLC_2.0"
+  }
+ ],
+ "serviceCode": "ec2Enhancement",
+ "version": "0.0.68"
+}

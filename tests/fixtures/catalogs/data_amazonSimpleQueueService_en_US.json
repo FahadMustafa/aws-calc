@@ -1,0 +1,15 @@
+{
+ "mappingDefinitions": [
+  {
+   "mappingDefinitionName": "queueservice",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/queueservice/[currency]/current/queueservice.json"
+  },
+  {
+   "includeRegions": false,
+   "mappingDefinitionName": "datatransfer-calc",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/datatransfer/[currency]/current/datatransfer-calc.json"
+  }
+ ],
+ "serviceCode": "amazonSimpleQueueService",
+ "version": "0.0.51"
+}

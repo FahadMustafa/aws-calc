@@ -50,7 +50,7 @@ The calculator's save endpoint is unauthenticated. On load the SPA displays the 
 ## Repo layout
 
 - `SKILL.md` — skill entry point (read by Claude). Holds the workflow, versioned via the frontmatter `version` field.
-- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL), `check_versions.py` (form-version drift check), `body_math.py` (recomputes group subtotals and totals), `extract_saveas.py` (streams a HAR capture, extracts saveAs bodies).
+- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL), `check_versions.py` (form-version drift check), `body_math.py` (recomputes group subtotals and totals), `recompute_oracle.py` (re-derives each line item's monthly cost from calculator.aws's own metered unit maps and diffs it against the stored value), `catalog.py` (shared fetch/cache for those maps), `extract_saveas.py` (streams a HAR capture, extracts saveAs bodies).
 - `references/`
   - `body-schema.md`, `url-spec.md`, `service-codes.md` — top-level conventions.
   - `examples/` — captured ground-truth saveAs bodies, including `sample-saveas-body.json` (EC2 ×2 + RDS PostgreSQL + S3 + VPC).

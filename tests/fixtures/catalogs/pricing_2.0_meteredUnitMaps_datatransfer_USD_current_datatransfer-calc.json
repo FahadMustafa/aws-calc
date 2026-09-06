@@ -1,0 +1,49 @@
+{
+ "manifest": {
+  "ETLIngestionTriggerDate": "2026-08-31T12:14:48Z",
+  "accessType": "publish",
+  "currencyCode": "USD",
+  "esIndex": "plc-datatransfer-usd-20260831121448",
+  "hawkFilePublicationDate": "2026-08-31T12:14:48Z",
+  "serviceId": "datatransfer",
+  "source": "datatransfer-calc"
+ },
+ "regions": {
+  "US East (Ohio)": {
+   "DataTransfer External Inbound": {
+    "RegionlessRateCode": "9fqpr840jcGDyPPCm-030f_UOXTN7w2dbiMV4Nqpse4",
+    "price": "0.0000000000",
+    "rateCode": "5CHDB6K4USP8QXF3.JRTCKXETXF.6YS6EN2CT7"
+   },
+   "DataTransfer External Outbound Greater than 150 TB": {
+    "EndingRange": "Inf",
+    "RegionlessRateCode": "lmZLSvv27rKOmhWxGAdW8grkU7ZSDJyQem27HrUufC8",
+    "StartingRange": "153600",
+    "price": "0.0500000000",
+    "rateCode": "36H7S3NU9B7S3UT5.JRTCKXETXF.GPHXDESFBB"
+   },
+   "DataTransfer External Outbound Next 10 TB": {
+    "EndingRange": "10240",
+    "RegionlessRateCode": "UA6GLOusl27m66H5hOCnt45AXGlmJkj7i1nLGDFFz_s",
+    "StartingRange": "0",
+    "price": "0.0900000000",
+    "rateCode": "36H7S3NU9B7S3UT5.JRTCKXETXF.Q3Z75P77EN"
+   },
+   "DataTransfer External Outbound Next 100 TB": {
+    "EndingRange": "153600",
+    "RegionlessRateCode": "b0Od--gW5fErC8dLS1lLLYLZxCF8scjseOWS22GVhBc",
+    "StartingRange": "51200",
+    "price": "0.0700000000",
+    "rateCode": "36H7S3NU9B7S3UT5.JRTCKXETXF.N9EW5UVVPA"
+   },
+   "DataTransfer External Outbound Next 40 TB": {
+    "EndingRange": "51200",
+    "RegionlessRateCode": "5xUdJ6384m1GnBYAn2C5kNxqRaKMeS9oNDPTGG6N3gI",
+    "StartingRange": "10240",
+    "price": "0.0850000000",
+    "rateCode": "36H7S3NU9B7S3UT5.JRTCKXETXF.VF6T3GAUKQ"
+   }
+  }
+ },
+ "sets": {}
+}

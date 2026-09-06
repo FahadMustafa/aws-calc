@@ -1,0 +1,32 @@
+{
+ "manifest": {
+  "ETLIngestionTriggerDate": "2026-09-04T23:11:17Z",
+  "accessType": "publish",
+  "currencyCode": "USD",
+  "esIndex": "plc-ec2-usd-20260904231117",
+  "hawkFilePublicationDate": "2026-09-04T23:11:17Z",
+  "isMapped": "true",
+  "serviceId": "ec2",
+  "source": "ebs-calculator"
+ },
+ "regions": {
+  "US East (Ohio)": {
+   "Provisioned EBS IOPS gp3 Volumes per IOPS Mo": {
+    "RegionlessRateCode": "muNQW5nM3kU2C8a8YHlfteNKuOKRJbyy6j2xjn7UecI",
+    "price": "0.0050000000",
+    "rateCode": "M7SNV383JPWT8MVX.JRTCKXETXF.6YS6EN2CT7"
+   },
+   "Storage General Purpose gp2 GB Mo": {
+    "RegionlessRateCode": "uHBph1S-06VdccXN_lmX7_mObl7SoOaDZD1xBO1wfHQ",
+    "price": "0.1000000000",
+    "rateCode": "SCM63QZA8NKUYACF.JRTCKXETXF.6YS6EN2CT7"
+   },
+   "Storage General Purpose gp3 GB Mo": {
+    "RegionlessRateCode": "rfOvvXHDAJRZK8rCe8ThxmpU_7SjA3m6T5_yeV0z0FQ",
+    "price": "0.0800000000",
+    "rateCode": "M6UGCCQ3CDJQAA37.JRTCKXETXF.6YS6EN2CT7"
+   }
+  }
+ },
+ "sets": {}
+}

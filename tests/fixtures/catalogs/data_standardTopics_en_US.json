@@ -1,0 +1,19 @@
+{
+ "mappingDefinitions": [
+  {
+   "mappingDefinitionName": "sns",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/sns/[currency]/current/sns.json"
+  },
+  {
+   "includeRegions": false,
+   "mappingDefinitionName": "sns-addons",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/sns/[currency]/current/sns-addons.json"
+  },
+  {
+   "mappingDefinitionName": "datatransfer-calc",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/datatransfer/[currency]/current/datatransfer-calc.json"
+  }
+ ],
+ "serviceCode": "standardTopics",
+ "version": "0.0.64"
+}

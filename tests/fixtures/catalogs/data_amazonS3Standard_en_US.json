@@ -1,0 +1,20 @@
+{
+ "mappingDefinitions": [
+  {
+   "mappingDefinitionName": "s3-standard",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/s3/[currency]/current/s3-standard.json"
+  },
+  {
+   "includeRegions": false,
+   "mappingDefinitionName": "glacier",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/glacier/[currency]/current/glacier.json"
+  },
+  {
+   "includeRegions": false,
+   "mappingDefinitionName": "s3glacierdeeparchive",
+   "mappingDefinitionURL": "pricing/2.0/meteredUnitMaps/s3glacierdeeparchive/[currency]/current/s3glacierdeeparchive.json"
+  }
+ ],
+ "serviceCode": "amazonS3Standard",
+ "version": "0.0.71"
+}
