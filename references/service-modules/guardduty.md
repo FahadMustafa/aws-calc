@@ -70,19 +70,24 @@ One line item covers every paid GuardDuty dimension exposed by the calculator: f
   "ecsInstances":             {"value": "10", "unit": "perMonth"},
 
   // EC2 Runtime Monitoring — vCPU-months of EC2 instances covered.
-  "ec2Instances":             {"value": "10", "unit": "perMonth"},
-
-  // AI Protection — GB of AI data events analyzed per month.
-  // NEW in form 0.0.77. Inferred from the form definition, not capture-verified:
-  // subType fileSize, defaultOption {size: "gb", frequency: "month"} → unit "gb|month".
-  // The field is displayIf-gated on the `guardduty` metered-unit map carrying
-  // AquKJoDK1dc2lqKDfuB0bKsOqm6Syc7g-zViz94Oz2s, so it does not render in every region;
-  // omit the key entirely rather than sending "0" if you are unsure the region has it.
-  "aiDataEvents":             {"value": "10", "unit": "gb|month"}
+  "ec2Instances":             {"value": "10", "unit": "perMonth"}
 }
 ```
 
 All values are stringified numbers. Use `"0"` to disable a dimension cleanly. The three `*Instances` fields and `eksInstances` are **vCPU-months**, not instance counts — see "Ambiguity" below.
+
+### Fields present in form 0.0.77 that no capture exercised — inferred, not capture-verified
+
+```jsonc
+{
+  // AI Protection — GB of AI data events analyzed per month. Added in form 0.0.77.
+  // Shape read from the form definition: subType fileSize,
+  // defaultOption {size: "gb", frequency: "month"} → unit "gb|month". No form default.
+  "aiDataEvents": {"value": "<GB>", "unit": "gb|month"}
+}
+```
+
+Two reasons not to emit this without more work. **Its rate is unknown** — no Pricing API SKU has been resolved for GuardDuty AI Protection, so a line carrying it cannot be priced (see the `aiDataEvents` row in the filters table). And it is **region-gated**: the form only renders it where the `guardduty` metered-unit map carries `AquKJoDK1dc2lqKDfuB0bKsOqm6Syc7g-zViz94Oz2s`. Omit the key entirely rather than sending `"0"` when you are unsure the region has it.
 
 ## Pricing API filters
 
@@ -188,10 +193,11 @@ Reproduced against the captured `serviceCost.monthly = $90.20` in `us-east-2` wi
 
 - **Form 0.0.75 → 0.0.77 (2026-09-06).** Diffed against the live form definition (`data/amazonGuardDuty/en_US.json`, version `0.0.77`). Fields **added: `aiDataEvents`** (GuardDuty AI Protection — "AI Data Events Analyzed", subType `fileSize`, `gb|month`, region-gated on the `guardduty` metered-unit map); renamed: none; removed: none. All 17 previously documented cc keys are still present with the same ids. The new field is **inferred from the form definition, not capture-verified**, and its Pricing API SKU has not been resolved — do not quote an AI Protection line without looking the rate up first.
 - The $90.20 hand-total above was computed before AI Protection existed and does not include it; it still reconciles for the 17 original dimensions.
+
 ## Ambiguity worth flagging before relying on this
 
 - **`ec2Instances` / `ecsInstances` / `eksInstances` are vCPU-months, not instance counts.** The Pricing API SKU unit is `vCPU-Months` and the rates ($1.50/$0.75/$0.25 across the 500 / 5,000 vCPU tiers) match the published per-vCPU runtime monitoring fees. The calculator's UI labels these fields ambiguously, but the math only works as vCPU-months. When a user says "20 EC2 instances," multiply by the average vCPU/instance before populating.
 - **`auroraServerless` unit is ACU-months.** SKU `PaidRDSACUMonitored` is priced at $0.25 per ACU-month flat. Treat the input value as monthly ACUs averaged over the month.
 - **`s3put` "perMonth" unit is raw request count, not millions.** At $0.000215/request it contributes pennies even at 10k requests, but a user describing "10M PUTs" should enter `"10000000"`, not `"10"`.
 - **`managementEventsAnalysis`, `s3Events`, `KubernetesEvents` are likewise raw event counts.** Same gotcha — quote enough zeros.
-- The captured `configSummary` is incomplete (omits 6 of the 17 fields). Re-check if `version` bumps past `0.0.75`; if AWS fixes the summary, mirror the new phrasing.
+- The captured `configSummary` is incomplete (omits 6 of the 17 fields). It was captured against form 0.0.75 and has **not** been re-checked against 0.0.77 — which added an 18th field, so if AWS did fix the summary the current phrasing is already stale. Re-check on the next capture; if the summary changed, mirror the new phrasing.

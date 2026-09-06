@@ -211,6 +211,7 @@ Storage amount (<N> GB), Storage volume (<volume display>), Nodes (<N>), Instanc
 - Two corrections from the same read, neither caused by this bump. (1) **`storageVolume` never had an `"Aurora"` option** — the live list is gp2/gp3/io1/io2/Magnetic; the old prose was wrong and is now flagged above. (2) Eight live input ids were undocumented (`gp3Iops`, `gp3Throughput`, `provisioningIOPS`, `provisionedIOPSIO2`, `dedicatedLogVolume`, `numberOfHoursOnES`, `additionalBackupStorage`, `snapshotExport`); they are now documented as inferred-only. Since only one form version elapsed, these almost certainly predate 0.0.110 and were simply absent from the one capture behind this module — treat them as a documentation gap being closed, not as a 0.0.111 change.
 - **`references/examples/sample-saveas-body.json` was bumped to 0.0.111.** Its Postgres line uses only `createRDSProxy`, `DatabaseInsightsSelected`, `addRDSExtendedSupport`, `RDSExtendedSupportYear`, `retentionPeriod`, `storageAmount`, `storageVolume`, `columnFormIPM` — all of which exist unchanged in 0.0.111, so the bump carries no cc risk. The example's stored `serviceCost.monthly` was not re-derived.
 - Only `TermType: "OnDemand"` remains verified on this form; the Reserved warning above is unchanged.
+
 ## Notes
 
 - For other RDS engines (MySQL, MariaDB, Oracle, MS SQL, Aurora variants) the SPA uses a different `serviceCode` per engine. Add a sibling module before pricing those.

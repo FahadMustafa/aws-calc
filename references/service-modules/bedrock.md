@@ -4,7 +4,7 @@
 
 This module covers **Anthropic** + **In-Region On-Demand Standard tier** only. Other inference routes (Cross-region, Provisioned Throughput, Batch) and other tiers/feature flags use distinct sets of cc keys with different suffixes.
 
-> **Hard precondition (silent-$0 hazard).** The model and cache rates are selected by opaque tokens (`modelSelectionIRstan`, `selectedModelIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`). If any token is wrong or unknown, the SPA cannot decode it and renders the line as **$0** on the recipient's "Update" — regardless of what `serviceCost.monthly` you stored. Therefore: **only emit a Bedrock line when every token is either (a) the captured Anthropic token set below, or (b) harvested from a fresh HAR for the exact model.** After computing, assert `serviceCost.monthly > 0` for any non-zero request volume (the skill's global invariant); if it's $0 with real usage, you used a bad token — refuse the line instead. The model-name → token mapping **is** now solved — read the labelled dropdown options straight out of `data/anthropic/en_US.json` (see "The model name → token mapping is solved" below) — so you can get a correct token for any listed model without a HAR. That fixes token *selection* only: no other model's math has been validated, so a fresh model still needs the $0 assertion and, ideally, a capture.
+> **Hard precondition (silent-$0 hazard).** The model and cache rates are selected by opaque tokens (`modelSelectionIRstan`, `selectedModelIRstan`, `cacheReadIRstan`, `cacheWriteIRstan`). If any token is wrong or unknown, the SPA cannot decode it and renders the line as **$0** on the recipient's "Update" — regardless of what `serviceCost.monthly` you stored. Therefore: **only emit a Bedrock line when every token is either (a) the captured Anthropic token set below, or (b) harvested from a fresh HAR for the exact model.** After computing, assert `serviceCost.monthly > 0` for any non-zero request volume (the skill's global invariant); if it's $0 with real usage, you used a bad token — refuse the line instead. The model-name → token mapping can now be read out of `data/anthropic/en_US.json`'s labelled dropdown options (see the section below), which should give a correct token for any listed model without a HAR — **but that procedure is inferred from the form definition and is not capture-verified**: no line built from a form-resolved token has been round-tripped through the SPA. It also only fixes token *selection*; no other model's math has been validated. Treat option (b) as "harvested from a fresh HAR **or** resolved from the form definition and then proven non-zero", never as a substitute for the $0 assertion.
 
 ## Group-level header
 
@@ -80,9 +80,9 @@ Four cc fields carry opaque 43-char URL-safe-base64 tokens that the SPA derefere
 | `cacheReadIRstan` | Cache-read pricing variant | `n9r1OkCw7sahKrcm5k_dLlzEu09FwTSCVv5QwmP_Hs4` | **Anthropic: Claude Opus 4.6** (cache-read rate) |
 | `cacheWriteIRstan` | Cache-write pricing variant | `mJCg-f97ByF7pKaysTOJs737vV6RxBfUYYMwhpWBEvU` | **Anthropic: Claude Opus 4.6** (cache-write rate) |
 
-### The model name → token mapping is solved: read it from the form definition
+### The model name → token mapping: read it from the sub-service form definition
 
-The open question this module recorded — "where does the model-name → token mapping come from?" — is answered. **Option 2 below is the right answer:** `https://d1qsjq9pzbk1k6.cloudfront.net/data/anthropic/en_US.json` (the sub-service's own form definition, ~600 KB, not the 2 KB `amazonBedrock` descriptor) carries the labelled dropdown options directly. Each of the four token fields is a dropdown whose `options[]` entries pair a human label with the token as the option `id`:
+The open question this module used to record — "where does the model-name → token mapping come from?" — is answered, and neither of the places it used to point at is the source. Not `bundle.js`, and not the small `data/amazonBedrock/en_US.json` descriptor. The mapping is in **`https://d1qsjq9pzbk1k6.cloudfront.net/data/anthropic/en_US.json`** — the Anthropic *sub-service's own* form definition — which carries the labelled dropdown options directly. Each of the four token fields is a dropdown whose `options[]` entries pair a human label with the token as the option `id`:
 
 ```python
 import gzip, json, urllib.request
@@ -106,17 +106,15 @@ These tokens are `RegionlessRateCode` values from the SPA's public catalogs at:
 - `https://calculator.aws/pricing/2.0/meteredUnitMaps/bedrock/USD/current/bedrock.json` (~2 MB)
 - `https://calculator.aws/pricing/2.0/meteredUnitMaps/bedrockfoundationmodels/USD/current/bedrockfoundationmodels.json` (~1.1 MB)
 
-Unlike `amazon-mq.md`'s `mq.json` catalog (which has friendly keys like `"RabbitMQ Active Standby mq m5.large"` that resolve directly to tokens), **the Bedrock catalogs are keyed only by `RegionlessRateCode`** — no model-name metadata is embedded in `regions[*][<token>]`. The model-name → token mapping must come from one of:
+Unlike `amazon-mq.md`'s `mq.json` catalog (which has friendly keys like `"RabbitMQ Active Standby mq m5.large"` that resolve directly to tokens), **the Bedrock catalogs are keyed only by `RegionlessRateCode`** — no model-name metadata is embedded in `regions[*][<token>]`. That is why the name→token lookup goes through the sub-service form definition instead, as described above; the catalogs remain the place to look up a token's *rate* once you have it.
 
-1. **bundle.js's amazonBedrock model registry** (location and structure not yet fully reverse-engineered)
-2. **`https://d1qsjq9pzbk1k6.cloudfront.net/data/amazonBedrock/en_US.json`** — a ~2 KB descriptor file that the SPA also fetches; investigation in progress.
+So the working rule is:
 
-Until that mapping is documented (tracked as a follow-up beads issue), the safe path is:
+1. **For the captured Claude Opus 4.6 token set**: emit the tokens verbatim and quote with the standard formula.
+2. **For any other model**: resolve its four tokens from `data/anthropic/en_US.json` — that part no longer needs a HAR. But the rest of the line is still unvalidated for that model, so assert `serviceCost.monthly > 0` before returning it, and prefer a capture if the estimate matters.
+3. **For any other inference route or tier** (Global, Geo cross-region, Batch): different field suffixes entirely, none of them covered here. Capture first.
 
-1. **For the one known Anthropic model token combo above**: emit using the captured tokens verbatim and quote with the standard formula.
-2. **For any other model / cache configuration**: capture a fresh HAR with the SPA configured for the target model and harvest its four tokens, or refuse the line item and ask the user.
-
-See `references/opaque-tokens.md` for the general resolution pattern and the `scripts/resolve_token.py` helper (which already handles the catalog fetch; the Bedrock-specific name→token chain is the missing piece).
+See `references/opaque-tokens.md` for the general resolution pattern and the `scripts/resolve_token.py` helper (which handles the catalog fetch). Note that helper does **not** yet implement the form-definition lookup described above — that page may still describe the Bedrock name→token chain as unsolved.
 
 **Do not** substitute a different model's tokens while overriding `serviceCost.monthly` — the SPA recomputes from cc on load and renders a `$0` line when unknown tokens don't decode.
 

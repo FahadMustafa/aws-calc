@@ -161,8 +161,8 @@ Broker type (3-node cluster Broker), DT Inbound: <Internet|None> (<X> TB per mon
 {
   "activeBrokerType":   {"value": "1"},                             // "1" = Single-instance (form default); "0" selects Active/Standby — see Path 3
   "numberOfBrokers":    {"value": "<N>"},
-  "instanceType":       {"value": "HLZazhwFlWQWVAP40yLRU_mnrAAqfbFXoEnUQ8vO2E0"},   // RegionlessRateCode token — "Single Instance mq m5.large"
-  "brokerStorageType":  {"value": "Watrf2j3RTOHvqFvNyHO2__jk9suw5nwtH-siXP1ch0"},   // token — "Broker Storage GB Mo" (EFS, form default); EBS is "4yECRDLprMhFz4DNKwkPnhiB7MJsdz2F353VdKBw0HI" (NOT supported for mq.t2.micro)
+  "instanceType":       {"value": "HLZazhwFlWQWVAP40yLRU_mnrAAqfbFXoEnUQ8vO2E0"},   // RegionlessRateCode token; form labels it "mq.m5.large", mq.json's friendly key is "Single Instance mq m5.large"
+  "brokerStorageType":  {"value": "Watrf2j3RTOHvqFvNyHO2__jk9suw5nwtH-siXP1ch0"},   // form default; EBS is "4yECRDLprMhFz4DNKwkPnhiB7MJsdz2F353VdKBw0HI" (NOT supported for mq.t2.micro). The form labels these "Durability optimized (Amazon EFS)" / "Throughput optimized (EBS)"; the friendly keys "Broker Storage GB Mo" / "Broker Storage Single AZ GB-Mo" come from mq.json, not the form
   "storagePerBroker":   {"value": "200", "unit": "gb|NA"},          // form default 200 GB
 
   // Cross-region data replication broker count. Present in form 0.0.60 on BOTH
@@ -229,7 +229,7 @@ Number of Brokers running (<N>), Amazon MQ Broker Instance (<mq.x.y label>), Sto
 {
   "activeBrokerType":    {"value": "0"},                             // "0" = Active/standby-instance Broker
   "numberOfBrokers_2":   {"value": "<N>"},                           // typically 2 for active/standby — note the _2 suffix
-  "instanceType_2":      {"value": "7lVtnGTGLw_MCxTFas-0CZbLqyBXbwYqww8u7D2jAuo"},  // token — "Active Standby mq m5.large"
+  "instanceType_2":      {"value": "7lVtnGTGLw_MCxTFas-0CZbLqyBXbwYqww8u7D2jAuo"},  // token; form labels it "mq.m5.large", mq.json's friendly key is "Active Standby mq m5.large"
   // there is no brokerStorageType_2 — storage is FIXED to EFS on this branch
   "storagePerBroker_2":  {"value": "<X>", "unit": "gb|NA"},
 
@@ -259,7 +259,7 @@ Identical to Single Instance: `broker_cost = numberOfBrokers * 730 * mqBrokerPri
 
 ## Path 4: RabbitMQ Single Instance — `rabbitMQBroker` (Verified)
 
-✅ HAR-verified from the live SPA (`sessionStorage` key `awspc-root-estimate-v1`, captured 2026-06). The single-instance form reuses `estimateFor: "rabbitMQBroker"` / `version: "0.0.59"` (same as Cluster) but its cc uses a **different field set** than the Cluster path — do not copy the Cluster fields. Key differences: `rabbitBrokerType` is `"1"` for single-instance (Cluster is `"0"`), the instance/storage field names drop the `Clustered` suffix, there is **no broker-count field** (single instance is implicitly 1), and there is a distinct `rabbitmqBrokerStorageType` token field.
+✅ HAR-verified from the live SPA (`sessionStorage` key `awspc-root-estimate-v1`, captured 2026-06). The single-instance form reuses `estimateFor: "rabbitMQBroker"` (same as Cluster; `version` was `0.0.59` at capture time and the live form has since moved to `0.0.60` — see the Verification section) but its cc uses a **different field set** than the Cluster path — do not copy the Cluster fields. Key differences: `rabbitBrokerType` is `"1"` for single-instance (Cluster is `"0"`), the instance/storage field names drop the `Clustered` suffix, there is **no broker-count field** (single instance is implicitly 1), and there is a distinct `rabbitmqBrokerStorageType` token field.
 
 Line-item header:
 
