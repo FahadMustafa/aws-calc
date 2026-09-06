@@ -152,7 +152,10 @@ kb      = Average_message_size.value                                      (KB)
 days    = retentionperiod.value                                           (days)
 O       = The_amount_of_outbound_payload_data_scanned_per_month.value     (GB)
 
-publishedGB        = M * 1_000_000 * kb / 1_048_576           # ~ 1 GB per 262,144 msgs at 4 KB
+publishedGB        = M * 1_000_000 * kb / 1_000_000           # DECIMAL KB->GB: 10M x 4 KB = 40.0 GB
+#                                                              # NOT / 1_048_576 (binary) — that gives 38.147 GB
+#                                                              # and a $10.04 FIFO total against the captured
+#                                                              # $10.28. See the Verification note (2026-09-06).
 subscriberMessages = M * sub                                  # millions
 subscriberGB       = publishedGB * sub
 

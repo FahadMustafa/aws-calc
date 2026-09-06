@@ -11,8 +11,19 @@ stored value.
     python3 scripts/recompute_oracle.py references/examples/sample-saveas-body.json
     python3 scripts/recompute_oracle.py body.json --json
 
+Every line gets a `status`:
+
+- `ok`        — recomputed and compared. Breaches tolerance => exit 1.
+- `no-oracle` — deliberately not compared (no recomputer, or the recomputer declined
+                because the configuration is outside what it can defend). Never a
+                breach, and reported as *unverified*, not verified.
+- `failed`    — a registered recomputer tried and could not finish (a catalog is
+                unreachable, a region or key is missing). This is a covered service
+                left unverified by an accident, so it **exits 1**: a fetch failure
+                must not read the same as a pass.
+
 Exit codes: 0 all oracle-covered lines within tolerance, 1 at least one line out of
-tolerance (default 1%), 2 the body could not be read.
+tolerance (default 1%) or failed, 2 the body could not be read.
 
 WHAT IT DELIBERATELY DOES NOT DO
 --------------------------------
@@ -40,6 +51,7 @@ so `EC2_CALC_BASE` below hardcodes that convention (derived from the live bundle
 from __future__ import annotations
 
 import argparse
+import collections
 import json
 import sys
 import urllib.parse
@@ -140,13 +152,30 @@ def dt_entries(item: dict, field_name: str) -> list[dict]:
     return [e for e in value if isinstance(e, dict)] if isinstance(value, list) else []
 
 
+DT_UNIT_TO_GB = {
+    "tb_month": GB_PER_TB,
+    "tb|month": GB_PER_TB,
+    "tb": GB_PER_TB,
+    "gb_month": 1.0,
+    "gb|month": 1.0,
+    "gb": 1.0,
+}
+
+
 def dt_gb(entry: dict) -> float:
-    """Data-transfer entry volume in GB. `tb_month` is the only captured unit."""
+    """Data-transfer entry volume in GB.
+
+    An unrecognised unit raises: silently treating it as GB would under-charge a
+    TB figure by 1024x and look like a clean recompute.
+    """
     amount = as_float(entry.get("value"))
     unit = (entry.get("unit") or "").lower()
-    if unit in ("tb_month", "tb|month", "tb"):
-        return amount * GB_PER_TB
-    return amount
+    if amount == 0 and not unit:
+        return 0.0
+    factor = DT_UNIT_TO_GB.get(unit)
+    if factor is None:
+        raise CatalogError(f"unrecognised data-transfer unit {unit!r} — cannot convert to GB")
+    return amount * factor
 
 
 # --------------------------------------------------------------------------- #
@@ -251,15 +280,27 @@ def recompute_ec2(item: dict, region_name: str, *, refresh: bool = False) -> Ora
     if not instance_type:
         return no_oracle("line item has no instanceType")
 
+    # Only the consistent workload is priced as a flat hourly x 730. The spike
+    # variants (dailySpike / weeklySpike / monthlySpike) carry a baseline+peak shape
+    # in `workload.value.data` that ec2.md does not document, so pricing them as
+    # `data` instances round the clock would silently over- or under-quote.
+    workload = cc_value(item, "workload", {}) or {}
+    pattern = workload.get("workloadType") or cc_value(item, "workloadSelection", "consistent")
+    if pattern != "consistent":
+        return no_oracle(f"no oracle for workloadType {pattern!r} — only 'consistent' is modelled")
+
     notes: list[str] = []
     hourly = None
+    tried: list[str] = []
     for generation in ("Yes", "No"):
         # The map is sharded by "Current Generation"; the body does not say which
         # side the instance is on, so try current first and fall back to previous.
         # A missing shard is a normal outcome here (not every selector combination
         # has both generations), so it moves on rather than aborting the line.
+        url = ec2_shard_url(region_name, tenancy, os_name, generation)
+        tried.append(url)
         try:
-            shard = catalog.fetch_json(ec2_shard_url(region_name, tenancy, os_name, generation), refresh=refresh)
+            shard = catalog.fetch_json(url, refresh=refresh)
         except (CatalogError, OSError):
             continue
         for record in catalog.region_prices(shard, region_name).values():
@@ -271,9 +312,12 @@ def recompute_ec2(item: dict, region_name: str, *, refresh: bool = False) -> Ora
         if hourly is not None:
             break
     if hourly is None:
-        return no_oracle(f"instance type {instance_type!r} not found in ec2-calc for {os_name}/{tenancy}")
+        return no_oracle(
+            f"instance type {instance_type!r} not found in ec2-calc for {os_name}/{tenancy}; "
+            f"tried {', '.join(tried)}"
+        )
 
-    count = as_float((cc_value(item, "workload", {}) or {}).get("data"), 1.0)
+    count = as_float(workload.get("data"), 1.0)
     utilization = as_float(strategy.get("utilizationValue"), 100.0) / 100.0
     total = hourly * HOURS_PER_MONTH * utilization * count
 
@@ -371,38 +415,62 @@ def recompute_sns_standard(item: dict, region_name: str, *, refresh: bool = Fals
     def millions(key: str) -> float:
         return as_float(cc_value(item, key))
 
-    total = millions("numberOfRequests") * 1e6 * catalog.price_of(prices, "Amazon SNS API Requests")
+    def charge(key: str, catalog_key: str, multiplier: float = 1e6) -> float:
+        """Priced only when the dimension is actually used.
+
+        A region shard that omits one delivery SKU must not sink the whole line:
+        with zero usage the rate is never looked up, so the absent key costs
+        nothing. With non-zero usage a missing key still raises, because then the
+        oracle genuinely cannot price the line.
+        """
+        usage = millions(key)
+        if usage == 0:
+            return 0.0
+        return usage * multiplier * catalog.price_of(prices, catalog_key)
+
+    total = charge("numberOfRequests", "Amazon SNS API Requests")
 
     # HTTP and email carry their free bands in the map itself (a $0 first tier).
     http = millions("numberOfHTTPNotifications") * 1e6
-    total += walk_tiers(http, [
-        {"begin_range": 0, "end_range": 100_000, "price_per_unit": catalog.price_of(prices, "HTTP 0 to 100000")},
-        {"begin_range": 100_000, "end_range": "Inf", "price_per_unit": catalog.price_of(prices, "HTTP 100000 to Inf")},
-    ])
+    if http:
+        total += walk_tiers(http, [
+            {"begin_range": 0, "end_range": 100_000, "price_per_unit": catalog.price_of(prices, "HTTP 0 to 100000")},
+            {"begin_range": 100_000, "end_range": "Inf", "price_per_unit": catalog.price_of(prices, "HTTP 100000 to Inf")},
+        ])
     email = millions("numberOfEmailNotifications") * 1e6
-    total += walk_tiers(email, [
-        {"begin_range": 0, "end_range": 1000, "price_per_unit": catalog.price_of(prices, "SMTP 0 to 1000")},
-        {"begin_range": 1000, "end_range": "Inf", "price_per_unit": catalog.price_of(prices, "SMTP 1000 to Inf")},
-    ])
+    if email:
+        total += walk_tiers(email, [
+            {"begin_range": 0, "end_range": 1000, "price_per_unit": catalog.price_of(prices, "SMTP 0 to 1000")},
+            {"begin_range": 1000, "end_range": "Inf", "price_per_unit": catalog.price_of(prices, "SMTP 1000 to Inf")},
+        ])
 
-    total += millions("numberOfSQSNotifications") * 1e6 * catalog.price_of(prices, "Amazon SQS Notifications")
-    total += millions("aws_Lambda") * 1e6 * catalog.price_of(prices, "AWS Lambda Notifications")
-    total += millions("Amazon_Kinesis_Data_Firehose") * 1e6 * catalog.price_of(prices, "Amazon Kinesis Data Firehose Messages")
+    total += charge("numberOfSQSNotifications", "Amazon SQS Notifications")
+    total += charge("aws_Lambda", "AWS Lambda Notifications")
+    total += charge("Amazon_Kinesis_Data_Firehose", "Amazon Kinesis Data Firehose Messages")
 
     push = millions("numberOfMobilePushNotifications")
     if push > 0:
-        # The 1M/month free band is NOT in the map (only the "thereafter" rate is),
-        # but sns.md reconciled a captured $220.92 with it applied. Mirroring the
-        # capture, and saying so.
+        # Two liberties, both flagged rather than buried:
+        # 1. sns.json prices each mobile-push endpoint separately (APNS, GCM, ADM,
+        #    WNS, ...) but the cc has a single undifferentiated count, so the APNS
+        #    iOS rate stands in for all of them. They are all $0.0000005 today; if
+        #    that ever diverges, this line silently picks one.
+        # 2. The 1M/month free band is NOT in the map (only the "thereafter" rate
+        #    is), but sns.md reconciled a captured $220.92 with it applied.
+        notes.append(
+            "mobile push: APNS iOS rate used as the generic push rate (the cc has one "
+            "undifferentiated count; sns.json prices each endpoint type separately)"
+        )
         notes.append("mobile push: 1M/month free band applied per sns.md's capture — not present in sns.json")
-    push_rate = catalog.price_of(prices, "Apple Push Notification Service APNS iOS Notifications")
-    total += max(0.0, push - 1.0) * 1e6 * push_rate
+        push_rate = catalog.price_of(prices, "Apple Push Notification Service APNS iOS Notifications")
+        total += max(0.0, push - 1.0) * 1e6 * push_rate
 
-    total += as_float(cc_value(item, "publishAndDeliveryMessageScanning")) * catalog.price_of(prices, "Amazon SNS Message Scanning per GB")
-    total += as_float(cc_value(item, "auditReporting")) * catalog.price_of(prices, "Amazon SNS Audit Reporting per GB")
-    total += as_float(cc_value(item, "The_amount_of_outbound_payload_data_scanned_per_month")) * catalog.price_of(
-        prices, "Amazon SNS Standard Payload Scanned Filtered per GB"
-    )
+    for cc_key, catalog_key in (
+        ("publishAndDeliveryMessageScanning", "Amazon SNS Message Scanning per GB"),
+        ("auditReporting", "Amazon SNS Audit Reporting per GB"),
+        ("The_amount_of_outbound_payload_data_scanned_per_month", "Amazon SNS Standard Payload Scanned Filtered per GB"),
+    ):
+        total += charge(cc_key, catalog_key, multiplier=1.0)
 
     dt_field = next((k for k in cc(item) if k.startswith("simpleNotificationServiceSns_generated_")), None)
     if dt_field:
@@ -484,19 +552,30 @@ def evaluate(body: dict, *, refresh: bool = False) -> list[dict]:
         service_code = item.get("serviceCode") or ""
         stored = (item.get("serviceCost") or {}).get("monthly")
         recomputer = ORACLES.get(service_code)
+        status = "ok"
         if recomputer is None:
+            status = "no-oracle"
             result = no_oracle(f"no oracle for serviceCode {service_code!r}")
         else:
             try:
                 if not region_name:
                     region_name = catalog.region_display_name(item.get("region") or "")
                 result = recomputer(item, region_name, refresh=refresh)
-            except (CatalogError, ValueError, KeyError, OSError) as exc:
-                result = no_oracle(f"recompute failed: {type(exc).__name__}: {exc}")
+            except (CatalogError, OSError) as exc:
+                # A covered service the oracle could not reach or read. Not the same
+                # as "no oracle": it was supposed to verify this line and did not, so
+                # it is a breach, not a shrug. ValueError/KeyError are deliberately
+                # NOT caught — those are bugs in this file, and should surface as such.
+                status = "failed"
+                result = OracleResult(None, [f"recompute failed: {type(exc).__name__}: {exc}"])
+            else:
+                if result.recomputed is None:
+                    status = "no-oracle"
 
         row = {
             "key": label,
             "serviceCode": service_code,
+            "status": status,
             "stored": stored,
             "recomputed": result.recomputed,
             "delta": None,
@@ -514,7 +593,12 @@ def evaluate(body: dict, *, refresh: bool = False) -> list[dict]:
 
 
 def breaches(rows: list[dict], tolerance_pct: float) -> list[dict]:
-    return [r for r in rows if r["delta_pct"] is not None and abs(r["delta_pct"]) > tolerance_pct]
+    """Rows that block handoff: out of tolerance, or a covered line that failed."""
+    return [
+        r for r in rows
+        if r["status"] == "failed"
+        or (r["delta_pct"] is not None and abs(r["delta_pct"]) > tolerance_pct)
+    ]
 
 
 def _fmt(value, spec: str = ",.2f") -> str:
@@ -522,9 +606,9 @@ def _fmt(value, spec: str = ",.2f") -> str:
 
 
 def render_table(rows: list[dict], tolerance_pct: float) -> str:
-    header = ("line", "stored", "recomputed", "delta", "delta %")
+    header = ("line", "status", "stored", "recomputed", "delta", "delta %")
     body = [
-        (r["key"], _fmt(r["stored"]), _fmt(r["recomputed"]), _fmt(r["delta"], "+,.2f"),
+        (r["key"], r["status"], _fmt(r["stored"]), _fmt(r["recomputed"]), _fmt(r["delta"], "+,.2f"),
          "—" if r["delta_pct"] is None else format(r["delta_pct"], "+.3f") + "%")
         for r in rows
     ]
@@ -533,16 +617,18 @@ def render_table(rows: list[dict], tolerance_pct: float) -> str:
              "  ".join("-" * w for w in widths)]
     for row, cells in zip(rows, body):
         lines.append("  ".join(
-            c.ljust(w) if i == 0 else c.rjust(w) for i, (c, w) in enumerate(zip(cells, widths))
+            c.ljust(w) if i < 2 else c.rjust(w) for i, (c, w) in enumerate(zip(cells, widths))
         ).rstrip())
         for note in row["notes"]:
             lines.append(f"    ! {note}")
+    counts = collections.Counter(r["status"] for r in rows)
     failing = breaches(rows, tolerance_pct)
-    covered = [r for r in rows if r["recomputed"] is not None]
     lines.append("")
     lines.append(
-        f"{len(covered)}/{len(rows)} lines have an oracle; "
-        f"{len(failing)} outside ±{tolerance_pct:g}%."
+        f"{counts['ok']}/{len(rows)} lines compared, "
+        f"{counts['no-oracle']} unverified (no oracle), "
+        f"{counts['failed']} failed; "
+        f"{len(failing)} blocking (outside ±{tolerance_pct:g}% or failed)."
     )
     return "\n".join(lines)
 

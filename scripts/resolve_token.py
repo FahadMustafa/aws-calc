@@ -55,7 +55,7 @@ import argparse
 import re
 import sys
 
-from catalog import CACHE_DIR, CATALOG_URL, fetch_catalog  # noqa: F401  (re-exported)
+from catalog import CATALOG_URL, fetch_catalog  # noqa: F401  (re-exported)
 
 
 def is_friendly_key(key: str) -> bool:

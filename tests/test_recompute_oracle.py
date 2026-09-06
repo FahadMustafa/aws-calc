@@ -9,12 +9,18 @@ Fixture filenames are `catalog.cache_key_for_url(url)`, so the same function nam
 the on-disk cache entry and the committed fixture — no second mapping to drift.
 """
 import json
+import os
+import time
 from pathlib import Path
 
 import pytest
 
 import catalog
 import recompute_oracle as oracle
+
+# Captured before the autouse fixture swaps it out, so the cache tests below can
+# exercise the real thing.
+REAL_FETCH_JSON = catalog.fetch_json
 
 FIXTURES = Path(__file__).parent / "fixtures" / "catalogs"
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -318,3 +324,212 @@ def test_ec2_reports_an_unknown_instance_type_rather_than_zero():
     result = oracle.recompute_ec2(item, OHIO)
     assert result.recomputed is None
     assert any("not found in ec2-calc" in note for note in result.notes)
+
+
+# --------------------------------------------------------------------------- #
+# cache behaviour — TTL, atomic write, poisoned entries                         #
+# --------------------------------------------------------------------------- #
+
+
+URL = "https://calculator.aws/pricing/2.0/meteredUnitMaps/demo/USD/current/demo.json"
+
+
+@pytest.fixture
+def cache_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("AWS_CALC_CACHE", str(tmp_path))
+    return tmp_path
+
+
+def stub_network(monkeypatch, payload, calls):
+    """Replace urlopen with a counter that returns `payload` as an uncompressed body."""
+    class Response:
+        headers = {"Content-Encoding": ""}
+
+        def read(self):
+            return json.dumps(payload).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout=None):
+        calls.append(getattr(request, "full_url", request))
+        return Response()
+
+    monkeypatch.setattr(catalog.urllib.request, "urlopen", fake_urlopen)
+
+
+def test_a_fresh_cache_entry_is_served_without_a_fetch(cache_env, monkeypatch):
+    calls = []
+    stub_network(monkeypatch, {"regions": {"fresh": {}}}, calls)
+    assert REAL_FETCH_JSON(URL) == {"regions": {"fresh": {}}}
+    assert len(calls) == 1
+    assert REAL_FETCH_JSON(URL) == {"regions": {"fresh": {}}}
+    assert len(calls) == 1, "second call should have been served from cache"
+
+
+def test_a_cache_entry_older_than_the_ttl_is_refetched(cache_env, monkeypatch):
+    calls = []
+    stub_network(monkeypatch, {"regions": {"v": {}}}, calls)
+    REAL_FETCH_JSON(URL)
+    path = cache_env / catalog.cache_key_for_url(URL)
+    stale = time.time() - catalog.CACHE_TTL_SECONDS - 60
+    os.utime(path, (stale, stale))
+    REAL_FETCH_JSON(URL)
+    assert len(calls) == 2, "an entry past the 24h TTL must be refetched, not pinned forever"
+
+
+def test_a_future_dated_cache_entry_is_treated_as_stale(cache_env, monkeypatch):
+    """Clock skew or a hand-edited file must not pin the cache indefinitely."""
+    calls = []
+    stub_network(monkeypatch, {"regions": {}}, calls)
+    REAL_FETCH_JSON(URL)
+    path = cache_env / catalog.cache_key_for_url(URL)
+    ahead = time.time() + 10_000
+    os.utime(path, (ahead, ahead))
+    REAL_FETCH_JSON(URL)
+    assert len(calls) == 2
+
+
+def test_a_truncated_cache_file_is_a_miss_not_a_permanent_poisoning(cache_env, monkeypatch):
+    calls = []
+    stub_network(monkeypatch, {"regions": {"good": {}}}, calls)
+    path = cache_env / catalog.cache_key_for_url(URL)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text('{"regions": {"trun')  # a half-written file
+    assert REAL_FETCH_JSON(URL) == {"regions": {"good": {}}}
+    assert len(calls) == 1
+    assert json.loads(path.read_text()) == {"regions": {"good": {}}}
+
+
+def test_the_cache_write_is_atomic_and_leaves_no_temp_file(cache_env, monkeypatch):
+    stub_network(monkeypatch, {"regions": {}}, [])
+    REAL_FETCH_JSON(URL)
+    names = [p.name for p in cache_env.iterdir()]
+    assert names == [catalog.cache_key_for_url(URL)]
+    assert not any(n.endswith(".tmp") for n in names)
+
+
+def test_refresh_bypasses_a_fresh_cache_entry(cache_env, monkeypatch):
+    calls = []
+    stub_network(monkeypatch, {"regions": {}}, calls)
+    REAL_FETCH_JSON(URL)
+    REAL_FETCH_JSON(URL, refresh=True)
+    assert len(calls) == 2
+
+
+# --------------------------------------------------------------------------- #
+# status: a failed lookup is a breach, not a shrug                              #
+# --------------------------------------------------------------------------- #
+
+
+def test_a_covered_line_whose_catalog_is_unreachable_fails_and_exits_one(
+    sample_body, monkeypatch, offline_catalog, capsys, tmp_path
+):
+    """An unreachable catalog must not read the same as a clean recompute."""
+    def flaky(url, *, refresh=False, cache_name=None):
+        if "s3-standard" in url:
+            raise catalog.CatalogError("simulated CDN failure")
+        return offline_catalog(url, refresh=refresh, cache_name=cache_name)
+
+    monkeypatch.setattr(catalog, "fetch_json", flaky)
+    rows = oracle.evaluate(sample_body)
+    row = row_for(rows, "amazonS3Standard")
+    assert row["status"] == "failed"
+    assert row["recomputed"] is None
+    assert any("simulated CDN failure" in note for note in row["notes"])
+    assert row in oracle.breaches(rows, oracle.DEFAULT_TOLERANCE_PCT)
+
+    path = tmp_path / "body.json"
+    path.write_text(json.dumps(sample_body))
+    assert oracle.main([str(path)]) == 1
+
+
+def test_statuses_separate_no_oracle_from_failed_and_ok(sample_body):
+    rows = oracle.evaluate(sample_body)
+    assert row_for(rows, "amazonS3Standard")["status"] == "ok"
+    assert row_for(rows, "ec2Enhancement", 1)["status"] == "no-oracle"
+    assert row_for(rows, "amazonRDSPostgreSQLDB")["status"] == "no-oracle"
+    assert not any(r["status"] == "failed" for r in rows)
+
+
+def test_a_programming_error_in_a_recomputer_is_not_swallowed(sample_body, monkeypatch):
+    """ValueError/KeyError are bugs in this file, not catalog problems."""
+    def boom(item, region_name, *, refresh=False):
+        raise KeyError("typo in a cc field name")
+
+    monkeypatch.setitem(oracle.ORACLES, "amazonS3Standard", boom)
+    with pytest.raises(KeyError):
+        oracle.evaluate(sample_body)
+
+
+# --------------------------------------------------------------------------- #
+# fix-round guards                                                              #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize("pattern", ["dailySpike", "weeklySpike", "monthlySpike"])
+def test_ec2_spike_workloads_report_no_oracle(pattern):
+    """Spike workloads carry an undocumented baseline+peak shape in `data`."""
+    item = {"calculationComponents": {
+        "selectedOS": {"value": "windows"},
+        "instanceType": {"value": "m5.large"},
+        "workloadSelection": {"value": pattern},
+        "workload": {"value": {"workloadType": pattern, "data": "1"}},
+        "pricingStrategy": {"value": {"selectedOption": "on-demand"}},
+    }}
+    result = oracle.recompute_ec2(item, OHIO)
+    assert result.recomputed is None
+    assert any(pattern in note for note in result.notes)
+
+
+def test_ec2_not_found_message_names_the_urls_it_tried():
+    item = {"calculationComponents": {
+        "selectedOS": {"value": "windows"},
+        "instanceType": {"value": "zz9.plural-z-alpha"},
+        "pricingStrategy": {"value": {"selectedOption": "on-demand"}},
+    }}
+    note = oracle.recompute_ec2(item, OHIO).notes[0]
+    assert "ec2-calc" in note and "/Yes/index.json" in note and "/No/index.json" in note
+
+
+def test_sns_standard_survives_a_region_shard_missing_the_push_sku(monkeypatch, offline_catalog):
+    """Zero push usage must not need the APNS rate at all."""
+    def without_apns(url, *, refresh=False, cache_name=None):
+        data = offline_catalog(url, refresh=refresh, cache_name=cache_name)
+        if url.endswith("/sns.json"):
+            data["regions"][OHIO] = {
+                k: v for k, v in data["regions"][OHIO].items()
+                if "Apple Push Notification" not in k
+            }
+        return data
+
+    monkeypatch.setattr(catalog, "fetch_json", without_apns)
+    item = {"calculationComponents": {
+        "numberOfRequests": {"value": "10", "unit": "millionPerMonth"},
+        "numberOfMobilePushNotifications": {"value": "0", "unit": "millionPerMonth"},
+    }}
+    result = oracle.recompute_sns_standard(item, OHIO)
+    assert result.recomputed == pytest.approx(5.00)
+
+    # ...but with real push usage the missing SKU is a genuine failure, not a $0.
+    item["calculationComponents"]["numberOfMobilePushNotifications"]["value"] = "10"
+    with pytest.raises(catalog.CatalogError):
+        oracle.recompute_sns_standard(item, OHIO)
+
+
+def test_sns_standard_flags_the_apns_rate_standing_in_for_all_push_endpoints():
+    item = {"calculationComponents": {
+        "numberOfMobilePushNotifications": {"value": "10", "unit": "millionPerMonth"},
+    }}
+    notes = oracle.recompute_sns_standard(item, OHIO).notes
+    assert any("APNS iOS rate used as the generic push rate" in note for note in notes)
+
+
+def test_an_unrecognised_data_transfer_unit_raises_rather_than_assuming_gb():
+    assert oracle.dt_gb({"value": "10", "unit": "tb_month"}) == 10240
+    assert oracle.dt_gb({"value": "10", "unit": "gb|month"}) == 10
+    with pytest.raises(catalog.CatalogError):
+        oracle.dt_gb({"value": "10", "unit": "pb_month"})

@@ -130,9 +130,13 @@ Report: `Saved + load-confirmed: load endpoint returns [N] bytes. (Storage verif
 
 **Then run the recompute oracle on the body file:** `python3 scripts/recompute_oracle.py <path to the body>`. For every line item whose `serviceCode` has a registered recomputer it re-derives `serviceCost.monthly` from calculator.aws's own metered unit maps and prints a per-line table (key, stored, recomputed, delta, delta %). Include that table in the step 8 report.
 
-- Exit **0**: every oracle-covered line is within ±1%.
-- Exit **1**: at least one covered line is outside ±1% — **this blocks handoff**. Fix the arithmetic (or the cc shape feeding it) and re-save; do not hand over the URL with a known bad number. If you conclude the oracle is the thing that is wrong, say so explicitly with the numbers, and fix the oracle rather than raising `--tolerance`.
-- Lines reported as **"no oracle"** (Reserved Instances, Savings Plans, and any `serviceCode` not in `ORACLES`) are **unverified, not verified** — the oracle deliberately refuses to guess. Say so in the breakdown rather than implying they were checked.
+Each row carries a `status`:
+
+- **`ok`** — recomputed and compared. A delta outside ±1% **blocks handoff**: fix the arithmetic (or the cc shape feeding it) and re-save; do not hand over the URL with a known bad number. If you conclude the oracle is the thing that is wrong, say so explicitly with the numbers and fix the oracle rather than raising `--tolerance`.
+- **`no-oracle`** — deliberately uncompared (Reserved Instances, Savings Plans, spike workloads, and any `serviceCode` not in `ORACLES`). These are **unverified, not verified** — the oracle refuses to guess. Say so in the breakdown rather than implying they were checked.
+- **`failed`** — a registered recomputer tried and could not finish (catalog unreachable, region or key missing). This **also blocks handoff**: a covered line the oracle could not read must not be reported as a pass. Retry (`--refresh` bypasses the 24h catalog cache); if it keeps failing, say which line is unverified and why.
+
+Exit **0** means every covered line is within tolerance and none failed; exit **1** means at least one line breached or failed.
 - The `!` notes under a row name what the oracle left out of its own total (an unmodelled snapshot, an inter-region transfer). A note means the recomputed figure is a floor, not a full number.
 
 For services with known-fragile recompute paths (RDS for Oracle / SQL Server — see those modules) or opaque tokens (Bedrock, Amazon MQ), recompute-validate before handing over: drive the live SPA headlessly (Playwright, via the `webapp-testing` skill), open the share URL, click **Update**, and assert no "incompatible with your original inputs" error and that every non-zero-usage line still shows a non-zero cost. If that validation fails with *"This service in your estimate isn't compatible with your original inputs"* (or a recipient reports the same), run `scripts/check_versions.py` first to check for form-version drift between the module-pinned `version` and live calculator.aws — a drifted form is a more likely cause than the cc shape, and the fix is to bump the module version rather than rework the shape.

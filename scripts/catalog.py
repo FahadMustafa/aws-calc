@@ -14,8 +14,11 @@ Two artifact families are involved, and they live on different hosts:
    `StartingRange` / `EndingRange` in the map's own unit (GB for data transfer).
 
 Everything here is a read-only GET, gzip-aware, cached under `$AWS_CALC_CACHE`
-(default `~/.cache/aws-calc/`). `fetch_json` is the single network seam — tests
-monkeypatch it and never touch the network.
+(default `~/.cache/aws-calc/`) for 24h, keyed on the cache file's mtime. Writes go
+through a temp file + `os.replace`, so a crash mid-write cannot leave a truncated
+cache behind, and an unreadable cache entry is treated as a miss rather than an
+error — the same conventions `check_versions.py` uses. `fetch_json` is the single
+network seam — tests monkeypatch it and never touch the network.
 """
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 import zlib
 from pathlib import Path
@@ -33,7 +37,16 @@ FORM_DEF_URL = "https://d1qsjq9pzbk1k6.cloudfront.net/data/{code}/en_US.json"
 CATALOG_URL = "https://calculator.aws/pricing/2.0/meteredUnitMaps/{service}/USD/current/{service}.json"
 CURRENCY = "USD"
 
-CACHE_DIR = Path(os.environ.get("AWS_CALC_CACHE", str(Path.home() / ".cache" / "aws-calc")))
+CACHE_TTL_SECONDS = 24 * 60 * 60
+
+
+def cache_dir() -> Path:
+    """`$AWS_CALC_CACHE`, or `~/.cache/aws-calc`.
+
+    Read at call time, not import time, so tests (and a caller that sets the env
+    var late) can point it somewhere else.
+    """
+    return Path(os.environ.get("AWS_CALC_CACHE") or (Path.home() / ".cache" / "aws-calc"))
 
 # Region code -> catalog region display name. Mirrors references/body-schema.md.
 REGION_NAMES = {
@@ -86,17 +99,53 @@ def cache_key_for_url(url: str) -> str:
     return slug.strip("_")
 
 
+def _read_cache(path: Path) -> dict | None:
+    """Cached payload if present and younger than the TTL, else None.
+
+    An unreadable or unparseable file is a miss, not an error: a half-written or
+    hand-mangled cache entry must not poison every later run. A future-dated mtime
+    (clock skew) is treated as stale for the same reason.
+    """
+    try:
+        age = time.time() - path.stat().st_mtime
+    except OSError:
+        return None
+    if not 0 <= age < CACHE_TTL_SECONDS:
+        return None
+    try:
+        with path.open(encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _write_cache(path: Path, data: dict) -> None:
+    """Write via a temp file + os.replace; a cache we cannot write is not an error."""
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        os.replace(tmp, path)  # atomic: a crash mid-write cannot truncate the cache
+    except OSError:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+
+
 def fetch_json(url: str, *, refresh: bool = False, cache_name: str | None = None) -> dict:
-    """GET `url`, decode gzip/deflate, parse JSON, cache under $AWS_CALC_CACHE.
+    """GET `url`, decode gzip/deflate, parse JSON, cache under $AWS_CALC_CACHE for 24h.
 
     This is the only function in the skill that reaches the network for pricing
     artifacts. Tests monkeypatch it.
     """
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_path = CACHE_DIR / (cache_name or cache_key_for_url(url))
-    if cache_path.exists() and not refresh:
-        with cache_path.open() as fh:
-            return json.load(fh)
+    cache_path = cache_dir() / (cache_name or cache_key_for_url(url))
+    if not refresh:
+        cached = _read_cache(cache_path)
+        if cached is not None:
+            return cached
     print(f"fetching {url}", file=sys.stderr)
     req = urllib.request.Request(url, headers={"Accept-Encoding": "gzip, deflate"})
     with urllib.request.urlopen(req, timeout=60) as resp:
@@ -107,8 +156,7 @@ def fetch_json(url: str, *, refresh: bool = False, cache_name: str | None = None
     elif enc == "deflate":
         raw = zlib.decompress(raw)
     data = json.loads(raw.decode("utf-8"))
-    with cache_path.open("w") as fh:
-        json.dump(data, fh)
+    _write_cache(cache_path, data)
     return data
 
 
