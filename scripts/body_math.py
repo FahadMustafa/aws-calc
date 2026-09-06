@@ -59,7 +59,13 @@ def _normalize_line_item(item: dict) -> dict:
 
 
 def _compute_container(container: dict) -> dict:
-    """Set groupSubtotal/totalCost on a group (or the body) and return totalCost."""
+    """Set groupSubtotal/totalCost on a group (or the body) and return totalCost.
+
+    Key presence follows the captured bodies: `groupSubtotal` carries `upfront`
+    only when one of the container's immediate line items does, while
+    `totalCost` always carries it (both examples store `"upfront": 0` on every
+    totalCost, including bodies with no reserved line item at all).
+    """
     services = container.get("services") or {}
     for item in services.values():
         _normalize_line_item(item)
@@ -68,12 +74,14 @@ def _compute_container(container: dict) -> dict:
         key: sum(_money(item.get("serviceCost"), key) for item in services.values())
         for key in MONEY_KEYS
     }
+    if not any("upfront" in (item.get("serviceCost") or {}) for item in services.values()):
+        subtotal.pop("upfront")
 
     child_totals = [
         _compute_container(group) for group in (container.get("groups") or {}).values()
     ]
     total = {
-        key: subtotal[key] + sum(child[key] for child in child_totals)
+        key: subtotal.get(key, 0.0) + sum(child.get(key, 0.0) for child in child_totals)
         for key in MONEY_KEYS
     }
 

@@ -23,6 +23,20 @@ this line is a decoy.
 }
 ```
 
+## Block comments
+
+```jsonc
+{
+  "serviceCode": "blockCommentedService",
+  "estimateFor": "someForm",
+  /* the SPA's "version" field for this shape is documented elsewhere:
+     "version": "9" is a decoy inside a block comment, quote char included */
+  "subServices": [
+    { /* placeholder — see below */ }
+  ]
+}
+```
+
 ## Group header with a nested sub-service
 
 ```json
@@ -59,6 +73,14 @@ def test_prose_version_does_not_leak_into_pairs(tmp_path):
     (tmp_path / "fake.md").write_text(MODULE_MD, encoding="utf-8")
     versions = {v for vs in extract_pairs(str(tmp_path)).values() for v, _ in vs}
     assert "9.9.9" not in versions
+
+
+def test_block_comment_version_is_not_paired(tmp_path):
+    """`/* ... */` comments (drs.md uses them) must not contribute a version."""
+    (tmp_path / "fake.md").write_text(MODULE_MD, encoding="utf-8")
+    pairs = extract_pairs(str(tmp_path))
+    assert "blockCommentedService" not in pairs
+    assert "9" not in {v for vs in pairs.values() for v, _ in vs}
 
 
 def test_real_modules_still_yield_the_full_code_set():

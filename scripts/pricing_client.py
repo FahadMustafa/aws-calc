@@ -102,6 +102,10 @@ def walk_tiers(gb: float, dims: list[dict]) -> float:
     and `price_per_unit`. Dimensions come back from the Pricing API in arbitrary
     order, so they are sorted by `begin_range` here. Usage below a band's
     begin_range contributes nothing to that band.
+
+    A blank range falls back to `default`; anything else that isn't a number or
+    "Inf" raises ValueError rather than silently becoming an unbounded band and
+    over-charging the whole volume at one tier's rate.
     """
     def _num(value, default: float) -> float:
         text = str(value).strip()
@@ -109,10 +113,7 @@ def walk_tiers(gb: float, dims: list[dict]) -> float:
             return float("inf")
         if not text:
             return default
-        try:
-            return float(text)
-        except ValueError:
-            return default
+        return float(text)  # raises ValueError on a malformed range — fail loud
 
     total = 0.0
     for dim in sorted(dims, key=lambda d: _num(d.get("begin_range", 0), 0.0)):

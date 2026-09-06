@@ -49,8 +49,13 @@ _FENCE_RE = re.compile(r"```(?:json|jsonc)\n(.*?)```", re.DOTALL)
 _VERSION_RE = re.compile(r"^[0-9][0-9.]*$")
 
 
-def _strip_line_comments(block: str) -> str:
-    """Drop `// ...` jsonc comments without touching `//` inside string literals."""
+def _strip_comments(block: str) -> str:
+    """Drop `// ...` and `/* ... */` jsonc comments, ignoring both inside strings.
+
+    drs.md uses block comments as sub-service placeholders, and a comment can
+    contain braces or a stray quote — leaving them in would desync the object
+    scanner and let a commented-out "version" get paired.
+    """
     out = []
     in_string = False
     i, n = 0, len(block)
@@ -74,6 +79,10 @@ def _strip_line_comments(block: str) -> str:
         if ch == "/" and i + 1 < n and block[i + 1] == "/":
             while i < n and block[i] != "\n":
                 i += 1
+            continue
+        if ch == "/" and i + 1 < n and block[i + 1] == "*":
+            end = block.find("*/", i + 2)
+            i = n if end == -1 else end + 2
             continue
         out.append(ch)
         i += 1
@@ -135,7 +144,7 @@ def extract_pairs(modules_dir: str) -> dict[str, set[tuple[str, str]]]:
         text = open(path, encoding="utf-8").read()
         fname = os.path.basename(path)
         for block in _FENCE_RE.findall(text):
-            for obj in _iter_object_literals(_strip_line_comments(block)):
+            for obj in _iter_object_literals(_strip_comments(block)):
                 code, version = obj.get("serviceCode"), obj.get("version")
                 if code and version and _VERSION_RE.match(version):
                     pairs.setdefault(code, set()).add((version, fname))

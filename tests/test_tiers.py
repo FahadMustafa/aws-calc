@@ -46,3 +46,10 @@ def test_walk_tiers_treats_blank_begin_range_as_zero():
         {"begin_range": "10240", "end_range": "Inf", "price_per_unit": 0.085},
     ]
     assert walk_tiers(20000, dims) == pytest.approx(921.6 + 829.6)
+
+
+def test_walk_tiers_rejects_an_unparseable_range():
+    # a malformed endRange must fail loudly, not silently become unbounded
+    dims = [{"begin_range": "0", "end_range": "ten thousand", "price_per_unit": 0.09}]
+    with pytest.raises(ValueError):
+        walk_tiers(20000, dims)

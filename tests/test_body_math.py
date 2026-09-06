@@ -111,3 +111,84 @@ def test_captured_examples_reconcile(fname):
     assert recomputed["groupSubtotal"]["monthly"] == pytest.approx(
         body["groupSubtotal"]["monthly"], abs=0.01
     )
+
+
+def _cost_key_sets(container: dict, path: str = "body") -> dict[str, tuple]:
+    """Map every container path to the key tuples of its groupSubtotal/totalCost."""
+    out = {
+        f"{path}.groupSubtotal": tuple(container.get("groupSubtotal", {})),
+        f"{path}.totalCost": tuple(container.get("totalCost", {})),
+    }
+    for name, group in (container.get("groups") or {}).items():
+        out.update(_cost_key_sets(group, f"{path}.groups[{name}]"))
+    return out
+
+
+@pytest.mark.parametrize(
+    "fname", ["sample-saveas-body.json", "groups-example-body.json"]
+)
+def test_captured_examples_keep_their_upfront_key_shape(fname):
+    """`upfront` is emitted only where the capture has it.
+
+    groups-example-body.json stores `groupSubtotal: {"monthly": 1.02}` with no
+    upfront, while sample-saveas-body.json stores `upfront: 0` — a recompute must
+    not invent or drop the key.
+    """
+    body = json.loads((EXAMPLES / fname).read_text())
+    assert _cost_key_sets(compute_totals(body)) == _cost_key_sets(body)
+
+
+def test_group_subtotal_omits_upfront_when_no_line_item_carries_it():
+    """Both captured bodies show the same rule: groupSubtotal carries `upfront`
+    only when an immediate line item does, while totalCost always carries it."""
+    body = {
+        "services": {"ec2Enhancement-flat": {"serviceCost": {"monthly": 5.0}}},
+        "groups": {
+            "Outer-1111": {
+                "name": "Outer",
+                "services": {"amazonMQ-outer": {"serviceCost": {"monthly": 2.0}}},
+                "groups": {},
+            }
+        },
+    }
+    out = compute_totals(body)
+    assert out["groupSubtotal"] == {"monthly": 5.0}
+    assert out["groups"]["Outer-1111"]["groupSubtotal"] == {"monthly": 2.0}
+    assert out["totalCost"] == {"monthly": 7.0, "upfront": 0.0}
+
+
+def test_group_subtotal_keeps_upfront_when_a_line_item_carries_it():
+    body = {
+        "services": {"ri-line": {"serviceCost": {"monthly": 1.0, "upfront": 500.0}}},
+        "groups": {},
+    }
+    out = compute_totals(body)
+    assert out["groupSubtotal"] == {"monthly": 1.0, "upfront": 500.0}
+    assert out["totalCost"] == {"monthly": 1.0, "upfront": 500.0}
+
+
+def test_upfront_propagates_up_from_a_nested_group():
+    body = {
+        "services": {"ec2Enhancement-flat": {"serviceCost": {"monthly": 5.0}}},
+        "groups": {
+            "Outer-1111": {
+                "name": "Outer",
+                "services": {},
+                "groups": {
+                    "Inner-2222": {
+                        "name": "Inner",
+                        "services": {"ri-line": {"serviceCost": {"monthly": 1.0, "upfront": 500.0}}},
+                        "groups": {},
+                    }
+                },
+            }
+        },
+    }
+    out = compute_totals(body)
+    outer = out["groups"]["Outer-1111"]
+    # no ungrouped line carries upfront, so the body's own subtotal has none
+    assert out["groupSubtotal"] == {"monthly": 5.0}
+    assert outer["groupSubtotal"] == {"monthly": 0.0}
+    # the nested group's upfront still reaches every ancestor total
+    assert outer["totalCost"] == {"monthly": 1.0, "upfront": 500.0}
+    assert out["totalCost"] == {"monthly": 6.0, "upfront": 500.0}

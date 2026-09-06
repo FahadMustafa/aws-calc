@@ -53,10 +53,11 @@ A group lives under the body's `groups` dict, keyed by `<userGivenName>-<uuid4>`
 2. For each group, generate a fresh uuid4 and build the key as `<name>-<uuid>`. The `<name>` segment must contain only characters legal in display (letters, digits, hyphens, spaces are fine; the SPA will round-trip whatever you put). The `name` field inside the group object must equal the `<name>` segment of the key.
 3. Put each grouped line item under `body.groups[<group-key>].services[<lineItemKey>]` instead of `body.services[<lineItemKey>]`. The line-item shape is identical — only its location changes.
 4. Compute subtotals bottom-up:
-   - For each leaf group: `groupSubtotal.monthly = sum(this group's immediate services[*].serviceCost.monthly)`. `totalCost` is the same as `groupSubtotal` for leaf groups (since nested groups contribute 0). Include `upfront` only if any line item is reserved.
+   - For each leaf group: `groupSubtotal.monthly = sum(this group's immediate services[*].serviceCost.monthly)`. `totalCost` is the same as `groupSubtotal` for leaf groups (since nested groups contribute 0).
    - For each parent group: `totalCost.monthly = groupSubtotal.monthly + sum(child groups[*].totalCost.monthly)`.
    - For the body: `groupSubtotal.monthly = sum(body.services[*].serviceCost.monthly)` (top-level ungrouped services only). `totalCost.monthly = body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`.
-5. Round as described under "Rounding" below — line items and sub-services to two decimals, subtotals and totals left as raw float sums.
+5. `upfront` key presence, as both captured bodies show it: every `totalCost` carries `upfront` (`0` when nothing is reserved); a `groupSubtotal` carries it only when one of that container's own line items does. `compute_totals` reproduces this — don't hand-add or drop the key.
+6. Round as described under "Rounding" below — line items and sub-services to two decimals, subtotals and totals left as raw float sums.
 
 ### Rounding
 
