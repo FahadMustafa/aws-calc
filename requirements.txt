@@ -2,3 +2,4 @@ requests>=2.31   # create_estimate.py — saveAs POST
 boto3>=1.34      # pricing_client.py — AWS Price List API
 ijson>=3.2       # extract_saveas.py — streaming HAR parse
 pytest>=8        # tests/ — run with `make test`
+jsonschema>=4    # validate_body.py — saveAs body schema check

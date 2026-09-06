@@ -28,6 +28,7 @@ This skill exists because driving the calculator.aws SPA with browser automation
     - `scripts/create_estimate.py` — POSTs the saveAs body and prints the share URL
     - `scripts/resolve_token.py` — resolves the SPA's opaque cc tokens (e.g. for Amazon MQ) by fetching the public `meteredUnitMaps` catalog; see `references/opaque-tokens.md`
     - `scripts/body_math.py` — `compute_totals(body)` recomputes every group subtotal and total bottom-up; run it over the assembled body before saving
+    - `scripts/validate_body.py` — schema + key-naming check on the saveAs body; `create_estimate.py` runs it automatically before the POST
     - `scripts/check_versions.py` — detects form-version drift between the module-pinned `version` values and the live calculator.aws service definitions (run when a recompute fails as "incompatible with your original inputs")
     - `references/url-spec.md` — endpoint contracts for save / load / share URL
     - `references/body-schema.md` — top-level shape of the saveAs JSON
@@ -95,6 +96,15 @@ Construct:
 
 <step n="6" name="Save and produce the share URL">
 Write the saveAs body to a temp JSON file, then run `scripts/create_estimate.py <path>`. The script prints the share URL on stdout and exits 0 on success. Capture the URL.
+
+**The body is validated before the POST.** `create_estimate.py` calls `scripts/validate_body.py` first and exits **2** without saving if the body is malformed, so a broken estimate never reaches the recipient's browser. Each error line reads `<json path>: <what is wrong>` — for example `$.services['amazonMQ-f50…'].subServices: {…} is not of type 'array'` means that line item used an object where the SPA expects an array. Fix the body at the path named and re-run; don't reach for `--no-validate` (which bypasses the check) unless you have confirmed the rule itself is wrong.
+
+The two checks it runs:
+
+- **Structure** (`scripts/body_schema.json`): required top-level keys, per-line-item `serviceCode`/`estimateFor`/`version`/`region`/`serviceCost`, numeric `monthly`, and exactly one of `calculationComponents` (flat service) or `subServices` (group service, always an array).
+- **Key naming**: every `services` key must start with `<serviceCode>-`, and every `groups` key's name segment must equal that group's `name`. The SPA routes a line item back to its form module by this key, so a mismatch renders as a broken tile.
+
+You can run it standalone at any point: `python3 scripts/validate_body.py <path>` (exit 0 clean, 1 with errors).
 </step>
 
 <step n="7" name="Verify the round-trip (storage only — does NOT test recompute)">

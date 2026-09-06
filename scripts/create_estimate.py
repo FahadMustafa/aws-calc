@@ -4,9 +4,12 @@
 Reads a JSON file containing the saveAs request body, POSTs it to the public
 unauthenticated calculator.aws save endpoint, and prints the share URL.
 
-Usage: python create_estimate.py [path/to/input.json]
+The body is validated before the POST (see validate_body.py); a malformed body
+is rejected here rather than stored and discovered later by the recipient.
+
+Usage: python create_estimate.py [--no-validate] [path/to/input.json]
        (default: references/examples/sample-saveas-body.json)
-Exit 0 on success, non-zero on failure.
+Exit 0 on success, 2 when validation rejects the body, non-zero on other failure.
 """
 import json
 import sys
@@ -14,6 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
+
+from validate_body import validate
 
 SAVE_API = "https://dnd5zrqcec4or.cloudfront.net/Prod/v2/saveAs"
 LOAD_API = "https://d3knqfixx3sbls.cloudfront.net/{}"
@@ -89,12 +94,30 @@ def create_estimate(body: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) > 1 and argv[1] in {"-h", "--help"}:
+    args = argv[1:]
+    if any(a in {"-h", "--help"} for a in args):
         print(__doc__)
         return 0
+    no_validate = "--no-validate" in args
+    positional = [a for a in args if not a.startswith("-")]
+
     default = Path(__file__).resolve().parent.parent / "references" / "examples" / "sample-saveas-body.json"
-    path = Path(argv[1]) if len(argv) > 1 else default
+    path = Path(positional[0]) if positional else default
     body = json.loads(path.read_text())
+
+    if not no_validate:
+        errors = validate(body)
+        if errors:
+            print(
+                f"Refusing to save: {len(errors)} validation error(s) in {path}.\n"
+                "Each line is <json path>: <what is wrong>. Fix the body and re-run "
+                "(or pass --no-validate to POST it anyway).",
+                file=sys.stderr,
+            )
+            for err in errors:
+                print(f"  {err}", file=sys.stderr)
+            return 2
+
     saved_key = create_estimate(body)
     print(SHARE_URL.format(saved_key))
     return 0

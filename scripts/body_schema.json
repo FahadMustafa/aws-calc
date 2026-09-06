@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/aws-calc/body_schema.json",
+  "title": "AWS Pricing Calculator saveAs body",
+  "description": "Structural contract for the JSON POSTed to the calculator.aws saveAs endpoint. Additional properties are allowed everywhere: the SPA carries fields we deliberately do not model.",
+  "type": "object",
+  "required": [
+    "name",
+    "services",
+    "groups",
+    "groupSubtotal",
+    "totalCost",
+    "support",
+    "metaData"
+  ],
+  "properties": {
+    "name": { "type": "string" },
+    "services": { "$ref": "#/$defs/serviceMap" },
+    "groups": { "$ref": "#/$defs/groupMap" },
+    "groupSubtotal": { "$ref": "#/$defs/cost" },
+    "totalCost": { "$ref": "#/$defs/cost" },
+    "support": { "type": "object" },
+    "metaData": {
+      "type": "object",
+      "required": ["locale", "currency", "createdOn", "source"],
+      "properties": {
+        "locale": { "type": "string" },
+        "currency": { "type": "string" },
+        "createdOn": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "cost": {
+      "description": "upfront is optional: the SPA omits it on lines and subtotals that have no upfront component.",
+      "type": "object",
+      "required": ["monthly"],
+      "properties": {
+        "monthly": { "type": "number" },
+        "upfront": { "type": "number" }
+      }
+    },
+    "serviceMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/lineItem" }
+    },
+    "groupMap": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/group" }
+    },
+    "group": {
+      "type": "object",
+      "required": ["name", "services", "groups", "groupSubtotal", "totalCost"],
+      "properties": {
+        "name": { "type": "string" },
+        "services": { "$ref": "#/$defs/serviceMap" },
+        "groups": { "$ref": "#/$defs/groupMap" },
+        "groupSubtotal": { "$ref": "#/$defs/cost" },
+        "totalCost": { "$ref": "#/$defs/cost" }
+      }
+    },
+    "lineItemBase": {
+      "description": "Fields every line item carries, whether it is a top-level service line or a sub-service inside subServices.",
+      "type": "object",
+      "required": [
+        "serviceCode",
+        "estimateFor",
+        "version",
+        "region",
+        "serviceCost"
+      ],
+      "properties": {
+        "serviceCode": { "type": "string", "minLength": 1 },
+        "estimateFor": { "type": "string", "minLength": 1 },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "region": { "type": "string", "minLength": 1 },
+        "regionName": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "serviceCost": { "$ref": "#/$defs/cost" },
+        "calculationComponents": { "type": "object" },
+        "subServices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/subLineItem" }
+        }
+      },
+      "$comment": "cc-or-subservices",
+      "oneOf": [
+        {
+          "required": ["calculationComponents"],
+          "not": { "required": ["subServices"] }
+        },
+        {
+          "required": ["subServices"],
+          "not": { "required": ["calculationComponents"] }
+        }
+      ]
+    },
+    "subLineItem": {
+      "description": "A sub-service inside subServices. Same shape as a line item, minus regionName/serviceName, which the SPA omits here.",
+      "$ref": "#/$defs/lineItemBase"
+    },
+    "lineItem": {
+      "description": "A top-level service line item. Carries the display names the estimate table renders.",
+      "allOf": [
+        { "$ref": "#/$defs/lineItemBase" },
+        { "required": ["regionName", "serviceName"] }
+      ]
+    }
+  }
+}
