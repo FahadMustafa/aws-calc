@@ -45,12 +45,14 @@ def _iter_line_items(body: dict):
     yield from walk_group(body)
 
 
-def warn_zero_cost_lines(body: dict) -> None:
+def warn_zero_cost_lines(body: dict) -> list[str]:
     """Backstop for the 'non-zero usage must yield non-zero cost' invariant.
 
     A $0 line item is usually a silent failure (wrong opaque token, inferred-but-
     wrong cc field name, empty data-transfer destination, or a zero-rate lookup).
     Some lines are legitimately free, so this only warns — it does not block.
+
+    Returns the keys of the zero-cost line items (empty list when all are priced).
     """
     zero = []
     for key, item in _iter_line_items(body):
@@ -67,6 +69,7 @@ def warn_zero_cost_lines(body: dict) -> None:
             "destination):\n  {}".format(len(zero), "\n  ".join(zero)),
             file=sys.stderr,
         )
+    return zero
 
 
 def create_estimate(body: dict) -> str:
@@ -86,6 +89,9 @@ def create_estimate(body: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) > 1 and argv[1] in {"-h", "--help"}:
+        print(__doc__)
+        return 0
     default = Path(__file__).resolve().parent.parent / "references" / "examples" / "sample-saveas-body.json"
     path = Path(argv[1]) if len(argv) > 1 else default
     body = json.loads(path.read_text())

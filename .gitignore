@@ -11,3 +11,5 @@ __pycache__/
 
 # Beads issue tracker: local Dolt-backed working data (contains owner emails / machine paths)
 .beads/
+.superpowers/
+.pytest_cache/

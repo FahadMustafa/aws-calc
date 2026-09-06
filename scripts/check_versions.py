@@ -41,11 +41,91 @@ DEFAULT_MODULES = os.path.join(
     "references", "service-modules",
 )
 
-# serviceCode -> version pairs are extracted from the header JSON blocks in each
-# module. We pair a "serviceCode": "X" with the nearest "version": "Y" that follows
-# it within a short window (the header/shape blocks keep them adjacent).
-_SC_RE = re.compile(r'"serviceCode":\s*"([^"]+)"')
-_VER_RE = re.compile(r'"version":\s*"([0-9][0-9.]*)"')
+# serviceCode -> version pairs are extracted from the fenced ```json / ```jsonc
+# blocks in each module. A pair is only made when "serviceCode" and "version"
+# are keys of the SAME object literal — a group wrapper and its nested
+# sub-services each carry their own pair, and prose outside a fence is ignored.
+_FENCE_RE = re.compile(r"```(?:json|jsonc)\n(.*?)```", re.DOTALL)
+_VERSION_RE = re.compile(r"^[0-9][0-9.]*$")
+
+
+def _strip_line_comments(block: str) -> str:
+    """Drop `// ...` jsonc comments without touching `//` inside string literals."""
+    out = []
+    in_string = False
+    i, n = 0, len(block)
+    while i < n:
+        ch = block[i]
+        if in_string:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(block[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                in_string = False
+            i += 1
+            continue
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == "/" and i + 1 < n and block[i + 1] == "/":
+            while i < n and block[i] != "\n":
+                i += 1
+            continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _read_string(text: str, i: int) -> tuple[str, int]:
+    """Read the string literal starting at text[i] == '\"'. Returns (value, next_i)."""
+    i += 1
+    chars = []
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text):
+            chars.append(text[i + 1])
+            i += 2
+            continue
+        if ch == '"':
+            return "".join(chars), i + 1
+        chars.append(ch)
+        i += 1
+    return "".join(chars), i  # unterminated — treat the rest as the value
+
+
+def _iter_object_literals(block: str):
+    """Yield {key: string_value} for each object literal's own (non-nested) keys."""
+    stack: list[dict[str, str]] = []
+    i, n = 0, len(block)
+    while i < n:
+        ch = block[i]
+        if ch == "{":
+            stack.append({})
+            i += 1
+        elif ch == "}":
+            if stack:
+                yield stack.pop()
+            i += 1
+        elif ch == '"':
+            key, i = _read_string(block, i)
+            j = i
+            while j < n and block[j].isspace():
+                j += 1
+            if j < n and block[j] == ":":
+                j += 1
+                while j < n and block[j].isspace():
+                    j += 1
+                if j < n and block[j] == '"':
+                    value, j = _read_string(block, j)
+                    if stack:
+                        stack[-1][key] = value
+                i = j
+        else:
+            i += 1
 
 
 def extract_pairs(modules_dir: str) -> dict[str, set[tuple[str, str]]]:
@@ -54,12 +134,11 @@ def extract_pairs(modules_dir: str) -> dict[str, set[tuple[str, str]]]:
     for path in sorted(glob.glob(os.path.join(modules_dir, "*.md"))):
         text = open(path, encoding="utf-8").read()
         fname = os.path.basename(path)
-        for m in _SC_RE.finditer(text):
-            code = m.group(1)
-            window = text[m.start():m.start() + 400]
-            vm = _VER_RE.search(window)
-            if vm:
-                pairs.setdefault(code, set()).add((vm.group(1), fname))
+        for block in _FENCE_RE.findall(text):
+            for obj in _iter_object_literals(_strip_line_comments(block)):
+                code, version = obj.get("serviceCode"), obj.get("version")
+                if code and version and _VERSION_RE.match(version):
+                    pairs.setdefault(code, set()).add((version, fname))
     return pairs
 
 

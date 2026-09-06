@@ -50,14 +50,21 @@ The calculator's save endpoint is unauthenticated. On load the SPA displays the 
 ## Repo layout
 
 - `SKILL.md` — skill entry point (read by Claude). Holds the workflow, versioned via the frontmatter `version` field.
-- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL), `check_versions.py` (form-version drift check), `extract_saveas.py` (streams a HAR capture, extracts saveAs bodies).
+- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL), `check_versions.py` (form-version drift check), `body_math.py` (recomputes group subtotals and totals), `extract_saveas.py` (streams a HAR capture, extracts saveAs bodies).
 - `references/`
   - `body-schema.md`, `url-spec.md`, `service-codes.md` — top-level conventions.
   - `examples/` — captured ground-truth saveAs bodies, including `sample-saveas-body.json` (EC2 ×2 + RDS PostgreSQL + S3 + VPC).
-  - `service-modules/` — one file per supported service (42 services as of v0.8.x; see `references/service-codes.md` for the current index). `_template.md` is the extension recipe.
+  - `service-modules/` — one file per supported service (42 services; see `references/service-codes.md` for the current index). `_template.md` is the extension recipe.
 - `captures/` — local-only, gitignored (HAR files are large and may contain session tokens). Created when you record HAR captures to derive new modules; `scripts/extract_saveas.py` writes extracted saveAs bodies here.
 - `findings.md` — original discovery write-up.
 - `deploy.sh` — rsync skill content to `~/.claude/skills/aws-calc/`.
+
+## Development
+
+```bash
+pip install -r requirements.txt
+make test      # pytest — no network, works off the checked-in example bodies
+```
 
 ## Contributing new service modules
 

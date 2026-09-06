@@ -1,9 +1,11 @@
 ---
 name: aws-calc
 version: "0.9.0"
-description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Use when the user wants a calculator.aws shareable estimate, a pricing-calculator link, or a sharable AWS cost estimate URL, or to hand off a workload description in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Not for pure rightsizing-and-Excel workflows; route those to aws-pricing instead."
+description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Use when the user wants a calculator.aws shareable estimate, a pricing-calculator link, or a sharable AWS cost estimate URL, or to hand off a workload description in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Not for pure rightsizing-and-Excel workflows; route those to the `aws-pricing` skill instead."
 disable-model-invocation: true
 ---
+
+<!-- `disable-model-invocation: true` means this skill is user-invoked only; the description's trigger phrasing is informational, not an auto-trigger. -->
 
 # aws-calc
 
@@ -25,6 +27,7 @@ This skill exists because driving the calculator.aws SPA with browser automation
     - `scripts/pricing_client.py` — Price List API queries (always use this, never write a parallel one)
     - `scripts/create_estimate.py` — POSTs the saveAs body and prints the share URL
     - `scripts/resolve_token.py` — resolves the SPA's opaque cc tokens (e.g. for Amazon MQ) by fetching the public `meteredUnitMaps` catalog; see `references/opaque-tokens.md`
+    - `scripts/body_math.py` — `compute_totals(body)` recomputes every group subtotal and total bottom-up; run it over the assembled body before saving
     - `scripts/check_versions.py` — detects form-version drift between the module-pinned `version` values and the live calculator.aws service definitions (run when a recompute fails as "incompatible with your original inputs")
     - `references/url-spec.md` — endpoint contracts for save / load / share URL
     - `references/body-schema.md` — top-level shape of the saveAs JSON
@@ -70,9 +73,9 @@ Issue the `get-products` calls in parallel — they are independent HTTPS reads.
 For each line item, apply the multipliers documented in its service module. The standard ones are:
 - Compute monthly: `price_per_hour * 730 * count * utilization_fraction`
 - Storage monthly: `price_per_gb_month * provisioned_gb`
-- Data transfer monthly: tier-aware sum: walk the user's monthly volume across the priceDimensions' `begin_range`/`end_range` bands
+- Data transfer monthly: tier-aware sum: walk the user's monthly volume across the priceDimensions' `begin_range`/`end_range` bands. Use `walk_tiers(gb, dims)` from `scripts/pricing_client.py` rather than re-deriving the band math — it handles unsorted dimensions and an `end_range` of `"Inf"`.
 
-Round line-item `monthly` and `upfront` to two decimal places. Use Python (`scripts/pricing_client.py` returns parsed numbers — keep the math out of token space) for arithmetic that risks rounding drift, especially across many tiers.
+Round per `references/body-schema.md` → "Rounding" (line items and sub-services to 2dp; group and body totals stay raw float sums). Use Python (`scripts/pricing_client.py` returns parsed numbers — keep the math out of token space) for arithmetic that risks rounding drift, especially across many tiers.
 
 Build the line item's `calculationComponents` exactly per the module — field names and value types matter; the SPA validates them on load.
 </step>
@@ -84,7 +87,7 @@ Construct:
 - `services`: object keyed by `<serviceCode>-<UUID>` (uuid4, lowercase, hyphenated). Each value is the per-line-item object with the calculationComponents you built and the serviceCost you computed. **Only ungrouped line items go here**; grouped line items live inside their group's `services` dict instead.
 - `groups`: `{}` if step 1 found no grouping intent; otherwise one entry per group keyed by `<groupName>-<uuid4>` (the SPA's convention — the `<groupName>` segment of the key must equal the group's `name` field). Each group has `{name, services, groups: {} for leaf, groupSubtotal, totalCost}` — see `references/body-schema.md` for the recursive shape and the bottom-up subtotal arithmetic.
 - `groupSubtotal`: sum of **top-level** `services[*].serviceCost.monthly` only (does **not** include grouped line items). If every line item is grouped, this is `{monthly: 0}`.
-- `totalCost`: `body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`. The `upfront` total sums the same way across reserved-capacity line items.
+- `totalCost`: `body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`. The `upfront` total sums the same way across reserved-capacity line items. Rather than doing this by hand, run the assembled body through `compute_totals` in `scripts/body_math.py`.
 - `support`: `{}`
 - `metaData`: `{locale: "en_US", currency: "USD", createdOn: <UTC ISO with milliseconds>, source: "calculator-platform"}`
 - `name`: the user's requested estimate name, or "AWS Estimate <ISO date>" if they didn't specify one

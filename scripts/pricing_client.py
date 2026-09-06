@@ -59,7 +59,7 @@ def _parse_filters(raw: list[str]) -> list[dict]:
     return filters
 
 
-def _extract_rates(price_item: dict) -> list[dict]:
+def _extract_rates_and_attributes(price_item: dict) -> tuple[list[dict], dict]:
     """Pull out each priceDimension as a flat dict with the data Claude needs.
 
     A single SKU may have multiple OnDemand price dimensions when pricing is
@@ -94,6 +94,37 @@ def _extract_rates(price_item: dict) -> list[dict]:
     return rates, attributes
 
 
+def walk_tiers(gb: float, dims: list[dict]) -> float:
+    """Sum `gb_in_band * price_per_unit` across tiered priceDimensions.
+
+    `dims` are the rate dicts produced by _extract_rates_and_attributes: each
+    carries `begin_range` / `end_range` (an `end_range` of "Inf" is unbounded)
+    and `price_per_unit`. Dimensions come back from the Pricing API in arbitrary
+    order, so they are sorted by `begin_range` here. Usage below a band's
+    begin_range contributes nothing to that band.
+    """
+    def _num(value, default: float) -> float:
+        text = str(value).strip()
+        if text.lower() in {"inf", "infinity"}:
+            return float("inf")
+        if not text:
+            return default
+        try:
+            return float(text)
+        except ValueError:
+            return default
+
+    total = 0.0
+    for dim in sorted(dims, key=lambda d: _num(d.get("begin_range", 0), 0.0)):
+        begin = _num(dim.get("begin_range", 0), 0.0)
+        end = _num(dim.get("end_range", "Inf"), float("inf"))
+        in_band = min(gb, end) - begin
+        if in_band <= 0:
+            continue
+        total += in_band * float(dim["price_per_unit"])
+    return total
+
+
 def cmd_get_products(args):
     client = _client(args.profile)
     filters = _parse_filters(args.filter or [])
@@ -108,7 +139,7 @@ def cmd_get_products(args):
     for page in pages:
         for raw in page.get("PriceList", []):
             item = json.loads(raw)
-            rates, attributes = _extract_rates(item)
+            rates, attributes = _extract_rates_and_attributes(item)
             skus.append({
                 "sku": item.get("product", {}).get("sku"),
                 "attributes": attributes,

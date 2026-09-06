@@ -56,7 +56,16 @@ A group lives under the body's `groups` dict, keyed by `<userGivenName>-<uuid4>`
    - For each leaf group: `groupSubtotal.monthly = sum(this group's immediate services[*].serviceCost.monthly)`. `totalCost` is the same as `groupSubtotal` for leaf groups (since nested groups contribute 0). Include `upfront` only if any line item is reserved.
    - For each parent group: `totalCost.monthly = groupSubtotal.monthly + sum(child groups[*].totalCost.monthly)`.
    - For the body: `groupSubtotal.monthly = sum(body.services[*].serviceCost.monthly)` (top-level ungrouped services only). `totalCost.monthly = body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`.
-5. Float sum precision: the SPA uses native JS addition, so `1.02 + 8167.30` may serialize as `8168.320000000001`. Don't pre-round to two decimals on totals — the calculator accepts either, but matching exact captured values requires letting the floating-point sum stand.
+5. Round as described under "Rounding" below — line items and sub-services to two decimals, subtotals and totals left as raw float sums.
+
+### Rounding
+
+One rule, applied at two different levels:
+
+- **Line items and sub-services** — round `serviceCost.monthly` and `serviceCost.upfront` to two decimal places. A group line item's `serviceCost` is the sum of its already-rounded sub-services (round the subs first, then sum, then round the group line — never round once at the end).
+- **Group `groupSubtotal` / `totalCost` and the body totals** — raw float sums of those rounded values. Do not round them. The SPA uses native JS addition, so `1.02 + 8167.30` legitimately serializes as `8168.320000000001`; the calculator accepts either form, but matching a captured body exactly requires letting the floating-point sum stand.
+
+`scripts/body_math.py` implements this: `compute_totals(body)` returns the body with every subtotal and total recomputed bottom-up.
 
 ### Anchor example
 
