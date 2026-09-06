@@ -29,7 +29,7 @@ This skill exists because driving the calculator.aws SPA with browser automation
     - `scripts/resolve_token.py` — resolves the SPA's opaque cc tokens (e.g. for Amazon MQ) by fetching the public `meteredUnitMaps` catalog; see `references/opaque-tokens.md`
     - `scripts/body_math.py` — `compute_totals(body)` recomputes every group subtotal and total bottom-up; run it over the assembled body before saving
     - `scripts/validate_body.py` — schema + key-naming check on the saveAs body; `create_estimate.py` runs it automatically before the POST
-    - `scripts/check_versions.py` — detects form-version drift between the module-pinned `version` values and the live calculator.aws service definitions (run when a recompute fails as "incompatible with your original inputs")
+    - `scripts/check_versions.py` — detects form-version drift between the module-pinned `version` values and the live calculator.aws service definitions; run in step 1b before pricing, and also the first thing to run if a recipient reports "incompatible with your original inputs"
     - `scripts/recompute_oracle.py` — re-derives each line item's `serviceCost.monthly` from calculator.aws's own metered unit maps and diffs it against the stored value; run over the assembled body as a last check
     - `scripts/catalog.py` — shared fetch/cache helper `recompute_oracle.py` and `resolve_token.py` use for calculator.aws's public metered-unit-map catalogs
     - `references/url-spec.md` — endpoint contracts for save / load / share URL
@@ -56,7 +56,9 @@ Report: `Step 1: Parsed [N] line items across [M] services. Defaults applied to 
 </step>
 
 <step n="1b" name="Check form-version drift">
-Run `python3 scripts/check_versions.py --json --codes <comma-separated serviceCodes from step 1>` before reading any module. calculator.aws ships new form versions over time, and a stored estimate pinned to an older version can fail the recipient's **Update** click with *"This service in your estimate isn't compatible with your original inputs"* — leaving them a line they cannot fix. Catching it here costs one cached lookup; catching it after you hand over the URL costs the user's trust.
+Run `python3 scripts/check_versions.py --json` (the full sweep, no `--codes`) before reading any module. calculator.aws ships new form versions over time, and a stored estimate pinned to an older version can fail the recipient's **Update** click with *"This service in your estimate isn't compatible with your original inputs"* — leaving them a line they cannot fix. Catching it here costs one cached lookup; catching it after you hand over the URL costs the user's trust.
+
+Run the full sweep rather than `--codes <serviceCodes from step 1>`: the sweep is cached for 24h so it's cheap, and it also catches drift in sub-service form versions (`amazonS3Standard`, `vpnConnectionVpc`, `applicationLoadBalancer`, `rdsBackup`, etc.) that step 1 has no way to know about yet since they aren't top-level serviceCodes.
 
 Live versions are cached for 24h under `$AWS_CALC_CACHE/live-versions.json` (default `~/.cache/aws-calc/`), so this is usually free. Pass `--refresh` to force a re-fetch.
 
@@ -110,7 +112,7 @@ Construct:
 - `services`: object keyed by `<serviceCode>-<UUID>` (uuid4, lowercase, hyphenated). Each value is the per-line-item object with the calculationComponents you built and the serviceCost you computed. **Only ungrouped line items go here**; grouped line items live inside their group's `services` dict instead.
 - `groups`: `{}` if step 1 found no grouping intent; otherwise one entry per group keyed by `<groupName>-<uuid4>` (the SPA's convention — the `<groupName>` segment of the key must equal the group's `name` field). Each group has `{name, services, groups: {} for leaf, groupSubtotal, totalCost}` — see `references/body-schema.md` for the recursive shape and the bottom-up subtotal arithmetic.
 - `groupSubtotal`: sum of **top-level** `services[*].serviceCost.monthly` only (does **not** include grouped line items). If every line item is grouped, this is `{monthly: 0}`.
-- `totalCost`: `body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`. The `upfront` total sums the same way across reserved-capacity line items. Rather than doing this by hand, run the assembled body through `compute_totals` in `scripts/body_math.py`.
+- `totalCost`: `body.groupSubtotal.monthly + sum(body.groups[*].totalCost.monthly)`. The `upfront` total sums the same way across reserved-capacity line items. Rather than doing this by hand, run the assembled body through `compute_totals` in `scripts/body_math.py`: `python3 scripts/body_math.py <body.json> > <body.totals.json>` (prints the fixed body with subtotals/totals recomputed; check `scripts/body_math.py --help` for the exact CLI shape).
 - `support`: `{}`
 - `metaData`: `{locale: "en_US", currency: "USD", createdOn: <UTC ISO with milliseconds>, source: "calculator-platform"}`
 - `name`: the user's requested estimate name, or "AWS Estimate <ISO date>" if they didn't specify one

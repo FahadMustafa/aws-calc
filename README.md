@@ -56,7 +56,7 @@ The calculator's save endpoint is unauthenticated. On load the SPA displays the 
   - `examples/` — captured ground-truth saveAs bodies, including `sample-saveas-body.json` (EC2 ×2 + RDS PostgreSQL + S3 + VPC).
   - `fixtures/` — the same ground-truth line items, split one-per-file (`<serviceCode>.json`) for quick lookup and schema testing.
   - `service-modules/` — one file per supported service (42 services; see `references/service-codes.md` for the current index). Each opens with a `## Coverage` table (`recompute-verified` / `capture-verified` / `inferred` per config path); the skill refuses `inferred` paths by default. `_template.md` is the extension recipe.
-- `tests/` — pytest suite (254 tests, no network); `tests/fixtures/catalogs/` holds captured metered-unit-map catalogs for `recompute_oracle.py` tests.
+- `tests/` — pytest suite, no network; `tests/fixtures/catalogs/` holds captured metered-unit-map catalogs for `recompute_oracle.py` tests.
 - `captures/` — local-only, gitignored (HAR files are large and may contain session tokens). Created when you record HAR captures to derive new modules; `scripts/extract_saveas.py` writes extracted saveAs bodies here.
 - `findings.md` — original discovery write-up.
 - `deploy.sh` — rsync skill content to `~/.claude/skills/aws-calc/`.

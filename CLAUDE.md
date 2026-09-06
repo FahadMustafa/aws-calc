@@ -55,7 +55,7 @@ bd close <id>         # Complete work
 
 ```bash
 pip install -r requirements.txt
-make test           # pytest, 254 tests, no network
+make test           # pytest, no network
 make check-versions  # form-version drift check against live calculator.aws (network)
 make deploy          # rsync SKILL.md/scripts/references to ~/.claude/skills/aws-calc/
 make install-hooks   # one-time: install a post-commit hook that runs `make deploy`

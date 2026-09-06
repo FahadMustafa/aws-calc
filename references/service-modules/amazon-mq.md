@@ -18,15 +18,6 @@
 >
 > **Also in 0.0.60: Path 2's `instanceType` / `brokerStorageType` values are opaque tokens, not the readable strings this module documented.** The live dropdown option ids are `RegionlessRateCode`s (e.g. `Single Instance mq t2.micro` → `xgy1w0xhhksiyvrKXO6-2UQQynDmqJafzIh8kqhD214`), the same tokens already tabulated below. Both flags are read from the form definition and are **not capture-verified**.
 
-## Coverage matrix
-
-| Path | `estimateFor` | Confidence | Anchor |
-|---|---|---|---|
-| RabbitMQ Cluster (Multi-AZ) | `rabbitMQBroker` | **Verified** end-to-end from HAR | `captures/saveAs/per-service/amazonMQ.json` (local capture, not in repo) |
-| ActiveMQ Single Instance | `singleInstanceBroker` (`activeBrokerType: "1"`) | **Inferred** from `captures/bundle.js` form + catalog token table; field values re-checked against form 0.0.60 | bundle.js + mq.json catalog + form 0.0.60 |
-| ActiveMQ Active/Standby | `singleInstanceBroker` (`activeBrokerType: "0"`) — **NOT `activeInstanceBroker`; that template is gone in 0.0.60** | **Inferred** from form 0.0.60 | form 0.0.60 + mq.json catalog |
-| RabbitMQ Single Instance | `rabbitMQBroker` (`rabbitBrokerType: "1"`) | **Verified** end-to-end from live-SPA HAR | sessionStorage capture (2026-06) + mq.json catalog |
-
 When the user's brief is ambiguous (e.g. "Amazon MQ broker, m5.large"), ask which engine (ActiveMQ vs RabbitMQ) and which deployment mode (single / active-standby / cluster) — engine + mode determines which template, which token series, and which rate row in the catalog.
 
 ## Opaque token resolution
