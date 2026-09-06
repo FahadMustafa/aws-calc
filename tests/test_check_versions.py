@@ -97,3 +97,154 @@ def test_real_modules_have_no_placeholder_versions():
     for code, versions in pairs.items():
         for ver, fname in versions:
             assert ver[0].isdigit(), f"{code} in {fname} has non-numeric version {ver!r}"
+
+
+# --- live-version cache + --codes filter -------------------------------------
+
+import json
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+import check_versions
+
+
+@pytest.fixture
+def cache_dir(tmp_path, monkeypatch):
+    """Point the live-version cache at a tmp dir so no test touches ~/.cache."""
+    d = tmp_path / "cache"
+    d.mkdir()
+    monkeypatch.setenv("AWS_CALC_CACHE", str(d))
+    return d
+
+
+def _write_cache(cache_dir, entries):
+    (cache_dir / "live-versions.json").write_text(json.dumps(entries), encoding="utf-8")
+
+
+def _iso(dt):
+    return dt.astimezone(timezone.utc).isoformat()
+
+
+def test_cache_hit_avoids_fetch(cache_dir, monkeypatch):
+    _write_cache(cache_dir, {"svcA": {"version": "3", "fetched": _iso(datetime.now(timezone.utc))}})
+    calls = []
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: calls.append(c) or (c, "x", None))
+
+    live = check_versions.resolve_live_versions(["svcA"])
+
+    assert calls == []
+    assert live == {"svcA": ("3", None)}
+
+
+def test_stale_cache_entry_is_refetched(cache_dir, monkeypatch):
+    old = datetime.now(timezone.utc) - timedelta(hours=25)
+    _write_cache(cache_dir, {"svcA": {"version": "3", "fetched": _iso(old)}})
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "4", None))
+
+    live = check_versions.resolve_live_versions(["svcA"])
+
+    assert live == {"svcA": ("4", None)}
+    stored = json.loads((cache_dir / "live-versions.json").read_text())
+    assert stored["svcA"]["version"] == "4"
+
+
+def test_refresh_bypasses_fresh_cache(cache_dir, monkeypatch):
+    _write_cache(cache_dir, {"svcA": {"version": "3", "fetched": _iso(datetime.now(timezone.utc))}})
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "5", None))
+
+    live = check_versions.resolve_live_versions(["svcA"], refresh=True)
+
+    assert live == {"svcA": ("5", None)}
+    assert json.loads((cache_dir / "live-versions.json").read_text())["svcA"]["version"] == "5"
+
+
+def test_no_live_def_is_cached_as_null_and_not_refetched(cache_dir, monkeypatch):
+    calls = []
+
+    def fake(code):
+        calls.append(code)
+        return code, None, "no-live-def"
+
+    monkeypatch.setattr(check_versions, "fetch_live_version", fake)
+    assert check_versions.resolve_live_versions(["svcA"]) == {"svcA": (None, "no-live-def")}
+
+    assert json.loads((cache_dir / "live-versions.json").read_text())["svcA"]["version"] is None
+    assert check_versions.resolve_live_versions(["svcA"]) == {"svcA": (None, "no-live-def")}
+    assert calls == ["svcA"]  # only the first run fetched
+
+
+def test_transient_errors_are_not_cached(cache_dir, monkeypatch):
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, None, "http 500"))
+
+    live = check_versions.resolve_live_versions(["svcA"])
+
+    assert live == {"svcA": (None, "http 500")}
+    assert "svcA" not in json.loads((cache_dir / "live-versions.json").read_text())
+
+
+def test_corrupt_cache_is_ignored(cache_dir, monkeypatch):
+    (cache_dir / "live-versions.json").write_text("{not json", encoding="utf-8")
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "7", None))
+
+    assert check_versions.resolve_live_versions(["svcA"]) == {"svcA": ("7", None)}
+
+
+# --- main(): --codes filter and stale_modules --------------------------------
+
+TWO_MODULES = {
+    "alpha.md": '```json\n{"serviceCode": "svcA", "estimateFor": "f", "version": "1"}\n```\n',
+    "beta.md": '```json\n{"serviceCode": "svcB", "estimateFor": "f", "version": "2"}\n```\n',
+}
+
+
+@pytest.fixture
+def modules(tmp_path):
+    d = tmp_path / "modules"
+    d.mkdir()
+    for name, body in TWO_MODULES.items():
+        (d / name).write_text(body, encoding="utf-8")
+    return d
+
+
+def test_codes_filter_narrows_rows(cache_dir, modules, monkeypatch, capsys):
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "1", None))
+
+    rc = check_versions.main(["--modules", str(modules), "--json", "--codes", "svcA"])
+
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 0
+    assert [r["serviceCode"] for r in out["rows"]] == ["svcA"]
+
+
+def test_unknown_code_in_filter_is_an_error(cache_dir, modules, monkeypatch, capsys):
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, "1", None))
+
+    rc = check_versions.main(["--modules", str(modules), "--json", "--codes", "svcZZ"])
+
+    assert rc == 2
+
+
+def test_stale_modules_lists_drifted_module_files(cache_dir, modules, monkeypatch, capsys):
+    # svcA pinned at 1, live 9 -> DRIFT; svcB pinned at 2, live 2 -> ok
+    live = {"svcA": "9", "svcB": "2"}
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, live[c], None))
+
+    rc = check_versions.main(["--modules", str(modules), "--json"])
+
+    out = json.loads(capsys.readouterr().out)
+    assert rc == 1
+    assert out["drift"] == 1
+    assert out["errors"] == 0
+    assert out["stale_modules"] == ["alpha.md"]
+    assert len(out["rows"]) == 2
+
+
+def test_stale_modules_empty_when_clean(cache_dir, modules, monkeypatch, capsys):
+    live = {"svcA": "1", "svcB": "2"}
+    monkeypatch.setattr(check_versions, "fetch_live_version", lambda c: (c, live[c], None))
+
+    rc = check_versions.main(["--modules", str(modules), "--json"])
+
+    assert rc == 0
+    assert json.loads(capsys.readouterr().out)["stale_modules"] == []

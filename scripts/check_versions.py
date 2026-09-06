@@ -21,11 +21,17 @@ Usage:
     python3 scripts/check_versions.py
     python3 scripts/check_versions.py --modules references/service-modules
     python3 scripts/check_versions.py --json        # machine-readable output
+    python3 scripts/check_versions.py --codes ec2Enhancement,s3   # only these codes
+    python3 scripts/check_versions.py --refresh     # ignore the 24h live-version cache
+
+Live versions are cached for 24h in $AWS_CALC_CACHE/live-versions.json (default
+~/.cache/aws-calc/) so the workflow's per-estimate drift gate costs no fetches.
 """
 from __future__ import annotations
 
 import argparse
 import concurrent.futures as cf
+import datetime as dt
 import glob
 import gzip
 import json
@@ -40,6 +46,8 @@ DEFAULT_MODULES = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "references", "service-modules",
 )
+CACHE_FILENAME = "live-versions.json"
+CACHE_TTL_SECONDS = 24 * 60 * 60
 
 # serviceCode -> version pairs are extracted from the fenced ```json / ```jsonc
 # blocks in each module. A pair is only made when "serviceCode" and "version"
@@ -175,21 +183,108 @@ def fetch_live_version(code: str) -> tuple[str, str | None, str | None]:
         return code, None, f"error: {e}"
 
 
-def main() -> int:
+def cache_path() -> str:
+    """$AWS_CALC_CACHE/live-versions.json — same env var resolve_token.py honours.
+
+    Read at call time (not import time) so tests can point it at a tmp dir.
+    """
+    base = os.environ.get("AWS_CALC_CACHE") or os.path.join(
+        os.path.expanduser("~"), ".cache", "aws-calc"
+    )
+    return os.path.join(base, CACHE_FILENAME)
+
+
+def _load_cache() -> dict[str, dict]:
+    """Return the cache mapping, or {} if it is missing or unreadable."""
+    try:
+        with open(cache_path(), encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_cache(cache: dict[str, dict]) -> None:
+    path = cache_path()
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(cache, fh, indent=2, sort_keys=True)
+    except OSError:
+        pass  # a cache we cannot write is a slow run, not a failed one
+
+
+def _is_fresh(entry: object, now: dt.datetime) -> bool:
+    if not isinstance(entry, dict) or "version" not in entry:
+        return False
+    try:
+        fetched = dt.datetime.fromisoformat(str(entry.get("fetched")))
+    except ValueError:
+        return False
+    if fetched.tzinfo is None:
+        fetched = fetched.replace(tzinfo=dt.timezone.utc)
+    return (now - fetched).total_seconds() < CACHE_TTL_SECONDS
+
+
+def resolve_live_versions(
+    codes, refresh: bool = False
+) -> dict[str, tuple[str | None, str | None]]:
+    """Return {code: (live_version_or_None, error_or_None)}, using the 24h cache.
+
+    A cached `null` version means "no live definition" (a pure UI grouping) and is
+    honoured like any other hit, so those codes are not refetched every run.
+    Transient errors (http 5xx, timeouts) are never cached.
+    """
+    codes = list(codes)
+    now = dt.datetime.now(dt.timezone.utc)
+    cache = {} if refresh else _load_cache()
+
+    live: dict[str, tuple[str | None, str | None]] = {}
+    to_fetch = []
+    for code in codes:
+        entry = cache.get(code)
+        if _is_fresh(entry, now):
+            version = entry["version"]
+            live[code] = (version, None if version is not None else "no-live-def")
+        else:
+            to_fetch.append(code)
+
+    if to_fetch:
+        with cf.ThreadPoolExecutor(max_workers=12) as ex:
+            results = list(ex.map(lambda c: fetch_live_version(c), to_fetch))
+        cache = _load_cache() if refresh else cache
+        stamp = now.isoformat()
+        for code, version, err in results:
+            live[code] = (version, err)
+            if err is None or err == "no-live-def":
+                cache[code] = {"version": version, "fetched": stamp}
+        _save_cache(cache)
+
+    return live
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--modules", default=DEFAULT_MODULES, help="path to references/service-modules")
     ap.add_argument("--json", action="store_true", help="emit machine-readable JSON")
-    args = ap.parse_args()
+    ap.add_argument("--codes", help="comma-separated serviceCodes to check (default: all)")
+    ap.add_argument("--refresh", action="store_true", help="ignore the 24h live-version cache")
+    args = ap.parse_args(argv)
 
     pairs = extract_pairs(args.modules)
     if not pairs:
         print(f"no serviceCode/version pairs found under {args.modules}", file=sys.stderr)
         return 2
 
-    with cf.ThreadPoolExecutor(max_workers=12) as ex:
-        live = dict(
-            (code, (ver, err)) for code, ver, err in ex.map(fetch_live_version, pairs)
-        )
+    if args.codes:
+        wanted = [c.strip() for c in args.codes.split(",") if c.strip()]
+        unknown = [c for c in wanted if c not in pairs]
+        if unknown:
+            print(f"unknown serviceCode(s): {', '.join(unknown)}", file=sys.stderr)
+            return 2
+        pairs = {c: pairs[c] for c in wanted}
+
+    live = resolve_live_versions(pairs, refresh=args.refresh)
 
     rows = []
     drift = errors = 0
@@ -215,8 +310,14 @@ def main() -> int:
             "modules": src,
         })
 
+    stale_modules = sorted({m for r in rows if r["status"] == "DRIFT" for m in r["modules"]})
+
     if args.json:
-        json.dump({"drift": drift, "errors": errors, "rows": rows}, sys.stdout, indent=2)
+        json.dump(
+            {"drift": drift, "errors": errors, "rows": rows, "stale_modules": stale_modules},
+            sys.stdout,
+            indent=2,
+        )
         print()
     else:
         print(f"{'serviceCode':42} {'skill':10} {'live':10} status")

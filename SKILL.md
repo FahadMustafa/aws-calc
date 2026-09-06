@@ -53,6 +53,20 @@ Also note **grouping intent**: if the user describes the workload in terms of bu
 Report: `Step 1: Parsed [N] line items across [M] services. Defaults applied to [list of fields]. Unsupported: [list or "none"]. Groups: [list of group names or "none"].`
 </step>
 
+<step n="1b" name="Check form-version drift">
+Run `python3 scripts/check_versions.py --json --codes <comma-separated serviceCodes from step 1>` before reading any module. calculator.aws ships new form versions over time, and a stored estimate pinned to an older version can fail the recipient's **Update** click with *"This service in your estimate isn't compatible with your original inputs"* — leaving them a line they cannot fix. Catching it here costs one cached lookup; catching it after you hand over the URL costs the user's trust.
+
+Live versions are cached for 24h under `$AWS_CALC_CACHE/live-versions.json` (default `~/.cache/aws-calc/`), so this is usually free. Pass `--refresh` to force a re-fetch.
+
+For every row with `"status": "DRIFT"` — **do not silently emit that line**. Tell the user the module is behind live (`skill` vs `live` version) and offer the choice:
+- **skip the line** — the rest of the estimate saves clean, or
+- **emit it anyway** with a loud note in the step 8 breakdown: "form-version drifted (module X vs live Y) — recipient's Update may fail".
+
+`no-live-def` rows are pure UI groupings, not drift — ignore them. Fetch errors (`http 5xx`, timeouts) are not drift either: note that the check was inconclusive and continue.
+
+Report: `Step 1b: Drift check on [N] codes — [M] DRIFT ([list]), [K] inconclusive. User chose: [skip/emit-with-note/none needed].`
+</step>
+
 <step n="2" name="Read the relevant service modules">
 For each unique `serviceCode` in your line-item list, read the matching file under `references/service-modules/`. Each module is short — read all of them in parallel. The module tells you:
 - The exact `calculationComponents` shape the SPA expects for that service
@@ -123,6 +137,7 @@ Output, in this order:
 2. A short Markdown table of line items: service, region, configuration summary, monthly cost, upfront cost, Pricing API SKU code(s) backing it
 3. Total monthly + total upfront below the table
 4. Any defaults you applied or fallbacks you took, as a brief bulleted list
+   - Include a drift note here for any line item emitted despite a step 1b DRIFT: "form-version drifted (module X vs live Y) — recipient's Update may fail on this line"
 
 Keep this presentation concise — the user mostly wants the URL. If the breakdown gets long, fold it into a `<details>` block.
 </step>
