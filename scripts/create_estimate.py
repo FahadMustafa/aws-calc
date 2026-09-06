@@ -77,9 +77,16 @@ def warn_zero_cost_lines(body: dict) -> list[str]:
     return zero
 
 
-def create_estimate(body: dict) -> str:
-    # Stamp a fresh createdOn so the server doesn't dedupe to a previous save.
+def stamp_created_on(body: dict) -> None:
+    """Stamp a fresh createdOn so the server doesn't dedupe to a previous save."""
     body.setdefault("metaData", {})["createdOn"] = now_iso_z()
+
+
+def create_estimate(body: dict) -> str:
+    # main() stamps before validate() so an otherwise-valid body isn't rejected
+    # for missing createdOn; stamp again here so direct library callers (who
+    # skip main()) still get one.
+    stamp_created_on(body)
 
     warn_zero_cost_lines(body)
 
@@ -104,6 +111,7 @@ def main(argv: list[str]) -> int:
     default = Path(__file__).resolve().parent.parent / "references" / "examples" / "sample-saveas-body.json"
     path = Path(positional[0]) if positional else default
     body = json.loads(path.read_text())
+    stamp_created_on(body)
 
     if not no_validate:
         errors = validate(body)

@@ -7,7 +7,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET="${HOME}/.claude/skills/aws-calc"
 
 mkdir -p "$TARGET"
-rsync -a --delete \
+rsync -a --delete --delete-excluded \
+    --exclude='__pycache__/' \
     --include='SKILL.md' \
     --include='scripts/***' \
     --include='references/***' \

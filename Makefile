@@ -1,4 +1,4 @@
-.PHONY: test check-versions deploy
+.PHONY: test check-versions deploy install-hooks
 
 # Run the test suite. No network: every test works off local files.
 test:
@@ -11,3 +11,7 @@ check-versions:
 # Mirror SKILL.md, scripts/ and references/ into ~/.claude/skills/aws-calc/.
 deploy:
 	./deploy.sh
+
+# Install a post-commit git hook that runs deploy.sh after every commit.
+install-hooks:
+	./scripts/install-hooks.sh

@@ -1,6 +1,6 @@
 ---
 name: aws-calc
-version: "0.9.0"
+version: "0.10.0"
 description: "Generate a populated AWS Pricing Calculator share URL (https://calculator.aws/#/estimate?id=...) from a natural-language brief. Use when the user wants a calculator.aws shareable estimate, a pricing-calculator link, or a sharable AWS cost estimate URL, or to hand off a workload description in calculator.aws — even if they don't say \"calculator.aws\" explicitly. Not for pure rightsizing-and-Excel workflows; route those to the `aws-pricing` skill instead."
 disable-model-invocation: true
 ---
@@ -30,6 +30,8 @@ This skill exists because driving the calculator.aws SPA with browser automation
     - `scripts/body_math.py` — `compute_totals(body)` recomputes every group subtotal and total bottom-up; run it over the assembled body before saving
     - `scripts/validate_body.py` — schema + key-naming check on the saveAs body; `create_estimate.py` runs it automatically before the POST
     - `scripts/check_versions.py` — detects form-version drift between the module-pinned `version` values and the live calculator.aws service definitions (run when a recompute fails as "incompatible with your original inputs")
+    - `scripts/recompute_oracle.py` — re-derives each line item's `serviceCost.monthly` from calculator.aws's own metered unit maps and diffs it against the stored value; run over the assembled body as a last check
+    - `scripts/catalog.py` — shared fetch/cache helper `recompute_oracle.py` and `resolve_token.py` use for calculator.aws's public metered-unit-map catalogs
     - `references/url-spec.md` — endpoint contracts for save / load / share URL
     - `references/body-schema.md` — top-level shape of the saveAs JSON
     - `references/service-modules/` — one file per supported service: `calculationComponents` shape, Pricing API filters, multipliers
@@ -167,6 +169,7 @@ Keep this presentation concise — the user mostly wants the URL. If the breakdo
 
 <expected_steps>
 1. Parse → one line item, serviceCode `ec2Enhancement`, region us-east-2, instance t3.medium, OS Linux, count 3, utilization 100%, EBS gp3 50 GB. No unsupported services.
+1b. Drift check: none drifted.
 2. Read `references/service-modules/ec2.md`.
 3. Pricing API: one SKU lookup for the t3.medium Linux on-demand rate; one for gp3 storage in us-east-2.
 4. Monthly compute = on_demand_hourly × 730 × 3. Storage = gp3 $/GB-mo × 50 × 3. ServiceCost.monthly = sum.
@@ -192,6 +195,7 @@ https://calculator.aws/#/estimate?id=&lt;40-hex&gt;
 
 <expected_steps>
 1. Parse → two line items: EC2 (5× r6i.2xlarge Linux OD eu-west-1, 1 TB gp3 each); S3 (50 TB standard + 20 TB outbound).
+1b. Drift check: none drifted.
 2. Read `references/service-modules/ec2.md` and `s3.md` in parallel.
 3. Pricing API: r6i.2xlarge Linux OD eu-west-1; gp3 eu-west-1; S3 standard storage eu-west-1; S3 outbound DT eu-west-1. Four parallel get-products calls.
 4. Compute. S3 storage at 50 TB falls in the first 50 TB tier ($0.023/GB-mo) and the next 450 TB tier ($0.022/GB-mo) — split the 51 200 GB across bands. Outbound DT is tiered too.

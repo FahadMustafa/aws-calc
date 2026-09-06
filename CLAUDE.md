@@ -37,6 +37,7 @@ bd close <id>         # Complete work
    bd dolt push
    git push
    git status  # MUST show "up to date with origin"
+   make deploy  # redeploy the skill so ~/.claude/skills/aws-calc/ matches the pushed repo
    ```
 5. **Clean up** - Clear stashes, prune remote branches
 6. **Verify** - All changes committed AND pushed
@@ -52,17 +53,27 @@ bd close <id>         # Complete work
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+pip install -r requirements.txt
+make test           # pytest, 254 tests, no network
+make check-versions  # form-version drift check against live calculator.aws (network)
+make deploy          # rsync SKILL.md/scripts/references to ~/.claude/skills/aws-calc/
+make install-hooks   # one-time: install a post-commit hook that runs `make deploy`
 ```
+
+`AWS_CALC_CACHE` overrides where `scripts/catalog.py` and `scripts/check_versions.py` cache
+calculator.aws's public catalogs (default `~/.cache/aws-calc`).
 
 ## Architecture Overview
 
-_Add a brief overview of your project architecture_
+`SKILL.md` defines the workflow Claude follows (parse brief → drift check → read service
+modules → price via `scripts/pricing_client.py` → assemble and validate the saveAs body →
+POST via `scripts/create_estimate.py`). Scripts under `scripts/` are standalone CLIs, not a
+package. `references/service-modules/` holds one file per supported service, each with a
+`## Coverage` table gating which config paths are safe to emit versus `inferred`.
+`references/fixtures/` and `references/examples/` are the captured ground-truth bodies both
+the skill and the test suite anchor to. `tests/` exercises validation, body math, drift
+detection, and the recompute oracle against those fixtures — no network required.
 
 ## Conventions & Patterns
 

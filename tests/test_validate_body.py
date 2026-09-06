@@ -299,3 +299,28 @@ def test_create_estimate_help_still_exits_zero():
     import create_estimate
 
     assert create_estimate.main(["create_estimate.py", "--help"]) == 0
+
+
+def test_create_estimate_stamps_created_on_before_validating(tmp_path, sample, monkeypatch):
+    """A body missing metaData.createdOn is stamped by main() before validate()
+    runs, so it isn't rejected for a field the script itself would fill in."""
+    import create_estimate
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"statusCode": 201, "body": json.dumps({"savedKey": "abc123"})}
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        return FakeResponse()
+
+    monkeypatch.setattr(create_estimate.requests, "post", fake_post)
+
+    body = copy.deepcopy(sample)
+    del body["metaData"]["createdOn"]
+    path = tmp_path / "no-created-on.json"
+    path.write_text(json.dumps(body))
+
+    assert create_estimate.main(["create_estimate.py", str(path)]) == 0

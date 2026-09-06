@@ -50,12 +50,13 @@ The calculator's save endpoint is unauthenticated. On load the SPA displays the 
 ## Repo layout
 
 - `SKILL.md` — skill entry point (read by Claude). Holds the workflow, versioned via the frontmatter `version` field.
-- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (POSTs saveAs body, prints share URL), `check_versions.py` (form-version drift check), `body_math.py` (recomputes group subtotals and totals), `recompute_oracle.py` (re-derives each line item's monthly cost from calculator.aws's own metered unit maps and diffs it against the stored value), `catalog.py` (shared fetch/cache for those maps), `extract_saveas.py` (streams a HAR capture, extracts saveAs bodies).
+- `scripts/` — `pricing_client.py` (Price List API queries), `create_estimate.py` (validates then POSTs the saveAs body, prints share URL), `validate_body.py` (schema + key-naming check, run automatically before every save), `check_versions.py` (form-version drift check), `body_math.py` (recomputes group subtotals and totals), `recompute_oracle.py` (re-derives each line item's monthly cost from calculator.aws's own metered unit maps and diffs it against the stored value — checks stored-vs-catalog math only, not what the SPA computes when a recipient clicks Update), `catalog.py` (shared fetch/cache for those metered-unit-map catalogs), `extract_saveas.py` (streams a HAR capture, extracts saveAs bodies).
 - `references/`
   - `body-schema.md`, `url-spec.md`, `service-codes.md` — top-level conventions.
   - `examples/` — captured ground-truth saveAs bodies, including `sample-saveas-body.json` (EC2 ×2 + RDS PostgreSQL + S3 + VPC).
   - `fixtures/` — the same ground-truth line items, split one-per-file (`<serviceCode>.json`) for quick lookup and schema testing.
-  - `service-modules/` — one file per supported service (42 services; see `references/service-codes.md` for the current index). `_template.md` is the extension recipe.
+  - `service-modules/` — one file per supported service (42 services; see `references/service-codes.md` for the current index). Each opens with a `## Coverage` table (`recompute-verified` / `capture-verified` / `inferred` per config path); the skill refuses `inferred` paths by default. `_template.md` is the extension recipe.
+- `tests/` — pytest suite (254 tests, no network); `tests/fixtures/catalogs/` holds captured metered-unit-map catalogs for `recompute_oracle.py` tests.
 - `captures/` — local-only, gitignored (HAR files are large and may contain session tokens). Created when you record HAR captures to derive new modules; `scripts/extract_saveas.py` writes extracted saveAs bodies here.
 - `findings.md` — original discovery write-up.
 - `deploy.sh` — rsync skill content to `~/.claude/skills/aws-calc/`.
@@ -64,8 +65,13 @@ The calculator's save endpoint is unauthenticated. On load the SPA displays the 
 
 ```bash
 pip install -r requirements.txt
-make test      # pytest — no network, works off the checked-in example bodies
+make test           # pytest — no network, works off the checked-in example bodies
+make check-versions  # detect form-version drift against live calculator.aws (network)
+make deploy          # rsync SKILL.md/scripts/references to ~/.claude/skills/aws-calc/
+make install-hooks   # one-time: auto-deploy on every commit via a post-commit git hook
 ```
+
+Set `AWS_CALC_CACHE` to relocate the on-disk cache `catalog.py`/`check_versions.py` use for calculator.aws's public catalogs (default `~/.cache/aws-calc`).
 
 ## Contributing new service modules
 
