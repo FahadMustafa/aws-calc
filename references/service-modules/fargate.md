@@ -1,6 +1,6 @@
 # AWS Fargate (`awsFargate`)
 
-Serverless container compute for ECS tasks (and EKS pods). One line item per task profile (vCPU/memory/storage combo + run rate). The captured form is **Linux x86 ECS-task On-Demand only** — other modes (Linux ARM, Windows, Spot, EKS pods) are inferred from the Pricing API and not yet round-tripped.
+Serverless container compute for ECS tasks (and EKS pods). One line item per task profile (vCPU/memory/storage combo + run rate). Linux x86 and **Linux ARM** On-Demand are verified; Windows, Spot and EKS pods are inferred. The form itself says Fargate Spot and Compute Savings Plans are not supported in the calculator.
 
 ## Coverage
 
@@ -9,11 +9,12 @@ Serverless container compute for ECS tasks (and EKS pods). One line item per tas
 | Linux x86 ECS task On-Demand (vCPU + memory + ephemeral storage, us-east-2) | capture-verified | `captures/saveAs/per-service/awsFargate.json` (local capture, 2026-05-11) — $0.04 matches exactly |
 | Linux x86 vCPU / memory rates | capture-verified | `pricing_client.py get-products` against `AmazonECS`, us-east-2 |
 | `numberOfTasks.unit: "perDay"` + `taskDuration` conversion | capture-verified | same capture |
-| Linux ARM (`selectArchitecture: "arm"`) | inferred | rates known, field-name assumption unverified |
+| Linux ARM (`selectArchitecture: "arm"`), 24x7 tasks as `numberOfTasks` `perMonth` + `taskDuration` `hr` (eu-central-1) | recompute-verified | live SPA 2026-09-24, 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`) — 8 ARM lines reproduced to the cent on "Update estimate" |
+| Linux ARM cc shape | capture-verified | `references/fixtures/awsFargate-arm.json` (SPA saveAs, 4 tasks x 730 h x 2 vCPU / 4 GB, $265.31) |
 | Windows (`operatingSystem: "windows"`) | inferred | adds an OS-license per-vCPU charge; form shape not captured |
 | Fargate Spot | inferred | Pricing API exposes no Spot rates; the cc field is assumed — capture before quoting |
 | Ephemeral storage above the 20 GB/task free allowance | inferred | overage rate confirmed, free-tier subtraction logic not round-tripped |
-| `numberOfTasks.unit` of `perMonth` / `perHour` | inferred | assumed from SPA UI conventions |
+| `numberOfTasks.unit: "perMonth"` + `taskDuration.unit: "hr"` | recompute-verified | same estimate. Other task units offered by the UI: per second / minute / hour / day; duration: seconds / minutes / hours / days |
 
 ## Line-item header
 
@@ -34,7 +35,7 @@ Serverless container compute for ECS tasks (and EKS pods). One line item per tas
 ```jsonc
 {
   "operatingSystem":                {"value": "linux"},               // linux | windows  (only "linux" round-tripped)
-  "selectArchitecture":             {"value": "x86"},                 // x86 | arm  (only "x86" round-tripped)
+  "selectArchitecture":             {"value": "x86"},                 // x86 | arm  (both round-tripped)
   "numberOfTasks":                  {"value": "1", "unit": "perDay"}, // unit: perDay | perMonth | perHour (others inferred from SPA conventions)
   "taskDuration":                   {"value": "1", "unit": "min"},    // min | hour | sec  (only "min" round-tripped)
   "vcpuPerTask":                    {"value": "1"},                   // Fargate-supported vCPU sizes: 0.25, 0.5, 1, 2, 4, 8, 16
@@ -47,6 +48,22 @@ Field name notes:
 - `memoryStandardFargateOnDemand` is the on-demand Linux-mode memory field. For Fargate Spot the field name is expected to differ (e.g. `memoryStandardFargateSpot`) — not yet captured.
 - `storageAmountECS` is per-task ephemeral storage. The captured value (20 GB) is exactly the free-tier ceiling, so the line item costs nothing for storage. Setting it >20 GB triggers overage billing (rate below) — not yet round-tripped.
 - `numberOfTasks.unit` is the multiplier basis. Captured value is `perDay`; the SPA converts internally to monthly task-hours. `perMonth` and `perHour` are documented as valid in the SPA UI but only `perDay` has been verified end-to-end.
+
+### Linux ARM, always-on services (recompute-verified 2026-09-24)
+
+```jsonc
+{
+  "operatingSystem":               {"value": "linux"},
+  "selectArchitecture":            {"value": "arm"},
+  "numberOfTasks":                 {"value": "4",   "unit": "perMonth"},   // N concurrent tasks
+  "taskDuration":                  {"value": "730", "unit": "hr"},         // hours each runs per month ("hr", not "hour")
+  "vcpuPerTask":                   {"value": "2"},
+  "memoryStandardFargateOnDemand": {"value": "4",   "unit": "gb|NA"},
+  "storageAmountECS":              {"value": "20",  "unit": "gb|NA"}
+}
+```
+
+A burst allowance works the same way: 8 tasks `perMonth` x `146` `hr`. The SPA rounds the vCPU and memory parts to 2dp **separately** before adding them, so mirror that to store the exact cent: `round(task_h * vcpu * v_rate, 2) + round(task_h * mem * m_rate, 2)`. eu-central-1 ARM: $0.03725 per vCPU-hour, $0.00409 per GB-hour. The `serviceCost` the SPA writes carries `monthly` only (no `upfront`).
 
 ## Pricing API filters
 
@@ -78,14 +95,14 @@ us-east-2: `$0.004445` / GB-hour.
 
 us-east-2: `$0.000111` / GB-hour. Only bills on the GB allocated **above** 20 per task. Free-tier handling not yet verified end-to-end — the captured case is exactly at the free-tier ceiling.
 
-### Linux ARM (inferred)
+### Linux ARM
 
 ```
 --filter usagetype=<PREFIX>-Fargate-ARM-vCPU-Hours:perCPU   # us-east-2: $0.03238
 --filter usagetype=<PREFIX>-Fargate-ARM-GB-Hours            # us-east-2: $0.00356
 ```
 
-ARM is ~20% cheaper than x86 on both axes. `selectArchitecture: "arm"` is the assumed calculationComponents value; verify with a fresh capture before quoting.
+ARM is ~20% cheaper than x86 on both axes. `selectArchitecture: "arm"` is capture- and recompute-verified (see the ARM section above).
 
 ### Windows (inferred)
 
@@ -168,8 +185,8 @@ Fargate-supported vCPU/memory combinations are constrained (e.g. 0.25 vCPU → 0
   - Ephemeral: max(20-20, 0) = 0 GB billable → **$0.00**
   - **Total: $0.03855 → SPA rounds to $0.04**, matches captured `serviceCost.monthly` exactly.
 - Not yet verified end-to-end (capture before relying on these):
-  - Linux ARM (`selectArchitecture: "arm"`) — rates known but field-name assumption unverified.
   - Windows (`operatingSystem: "windows"`) — adds OS-license per-vCPU charge; form-field shape may use a different memory field name.
   - Fargate Spot — Pricing API does not expose Spot rates; calculator's Spot mode uses a different calculationComponents field (assumed `memoryStandardFargateSpot` or `pricingStrategy`). Capture before quoting.
   - Ephemeral storage > 20 GB per task — overage rate confirmed but free-tier subtraction logic in the SPA is inferred, not round-tripped.
-  - `numberOfTasks.unit` other than `perDay` — `perMonth` / `perHour` assumed from SPA UI conventions but not captured.
+  - `numberOfTasks.unit` values other than `perDay` / `perMonth` (per second / minute / hour).
+- **Linux ARM captured and recompute-verified 2026-09-24** (eu-central-1): see the ARM section above and `fixtures/awsFargate-arm.json`. Form version still 0.0.66.

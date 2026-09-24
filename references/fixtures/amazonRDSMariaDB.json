@@ -1,0 +1,66 @@
+{
+  "calculationComponents": {
+    "createRDSProxy": {
+      "value": "0"
+    },
+    "storageAmount": {
+      "value": "500",
+      "unit": "gb|NA"
+    },
+    "DatabaseInsightsSelected": {
+      "value": "0"
+    },
+    "columnFormIPM": {
+      "value": [
+        {
+          "Number of Nodes": {
+            "value": "1"
+          },
+          "TermType": {
+            "value": "OnDemand"
+          },
+          "Instance Type": {
+            "value": "db.r7g.2xlarge"
+          },
+          "undefined": {
+            "value": {
+              "unit": "100",
+              "selectedId": "%Utilized/Month"
+            }
+          },
+          "Deployment Option": {
+            "value": "Multi-AZ"
+          },
+          "LeaseContractLength": {
+            "value": "1yr"
+          },
+          "PurchaseOption": {
+            "value": "No Upfront"
+          }
+        }
+      ]
+    },
+    "storageVolume": {
+      "value": "General Purpose-GP3"
+    },
+    "gp3Iops": {
+      "value": "12000"
+    },
+    "gp3Throughput": {
+      "value": "500",
+      "unit": "mbps"
+    }
+  },
+  "serviceCode": "amazonRDSMariaDB",
+  "region": "eu-central-1",
+  "estimateFor": "rdsForMariaDB",
+  "version": "0.0.132",
+  "description": null,
+  "serviceCost": {
+    "monthly": 1837.17,
+    "upfront": 0
+  },
+  "serviceName": "Amazon RDS for MariaDB",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "Storage amount (500 GB), Nodes (1), Instance type (db.r7g.2xlarge), Utilization (On-Demand only) (100 %Utilized/Month), Deployment selection (Multi-AZ), Pricing strategy (OnDemand 1yr No Upfront), Storage volume (General Purpose SSD (gp3)), General Purpose SSD (gp3) - IOPS (12000), General Purpose SSD (gp3) - Throughput (500 MiBps)"
+}

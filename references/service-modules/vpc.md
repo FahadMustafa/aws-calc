@@ -11,8 +11,10 @@ VPC is a **group** service: the line item has `subServices: [...]` for each pric
 | `dataTransferVpc` outbound + intra-region (2x cross-AZ) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` — $1126.40 = $921.60 out + $204.80 intra ($0.02/GB) |
 | `vpnConnectionVpc` (Site-to-Site VPN) — cc shape captured, hourly formula not reconciled | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` ($73/mo line; tunnel-hour nuance unresolved) |
 | `transitGatewayVpc` | inferred | shape documented from the capture/bundle; no reconciled cost in this module |
-| `networkAddressTranslationNatGatewayVpc` (NAT Gateway) | inferred | form 0.0.19 partial shape — missing `regionalNatGateway*` / `_generated_*`; refuse and offer a HAR |
-| `_generated_*` NAT token values | inferred | catalog probe 2026-07-13 returned nothing; HAR capture is the only route |
+| `networkAddressTranslationNatGatewayVpc` via a **Regional NAT Gateway** (1 gateway x N AZs, zonal count 0) | recompute-verified | live SPA 2026-09-24, 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`) (3 AZ / 1024 GB = $167.13; 1 AZ / 100 GB = $43.16) |
+| NAT cc shape (form 0.0.19, `estimateFor: "networkAddressTranslationGateway"`) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud-nat.json` (SPA saveAs) |
+| Zonal-only NAT (`regionalNatGatewayCount: "0"`) | inferred | refuse: the form rejects it: Regional count and AZ count are required with `minValue: 1`, so the UI cannot save a zonal-only NAT line |
+| `dataTransferVpc` with 5 TB internet + 20 TB intra-region (eu-central-1) | recompute-verified | same estimate, $870.40 |
 | Other VPC sub-services (`gatewayLoadBalancerVpc`, `ipamVpc`, `networkAccessAnalyzerVpc`, `reachabilityAnalyzerVpc`, `trafficMirroringVpc`, `vpcRouteServer`, `cloudWan`) | inferred | manifest key names only — capture a HAR before pricing |
 
 ## Group-level header
@@ -70,7 +72,31 @@ VPC is a **group** service: the line item has `subServices: [...]` for each pric
 }
 ```
 
-### NAT Gateway (`networkAddressTranslationNatGatewayVpc`) — NOT yet supported, refuse until HAR-captured
+### NAT Gateway (`networkAddressTranslationNatGatewayVpc`) — capture-verified 2026-09-24
+
+Verbatim from the SPA saveAs (`fixtures/amazonVirtualPrivateCloud-nat.json`). The form has a zonal block and a Regional NAT Gateway block, and **the Regional block is mandatory**: `regionalNatGatewayCount` and `regionalNatGatewayAzCount` are required with `minValue: 1` (the UI shows "Number of Regional NAT Gateways can't be less than 1"). The zonal `numberOfGateways` accepts 0. So model "one NAT gateway per AZ" as **one Regional NAT Gateway active in N AZs** and set the zonal count to 0. Regional NAT is billed per AZ-hour at the same rate as a zonal NAT gateway-hour (eu-central-1: both $0.052/h and $0.052/GB), so the total is identical to N zonal gateways; say so in the breakdown.
+
+```jsonc
+{
+  "serviceCode":  "networkAddressTranslationNatGatewayVpc",
+  "estimateFor":  "networkAddressTranslationGateway",       // NOT "natGateway"
+  "version":      "0.0.19",
+  "region":       "<code>",
+  "description":  null,
+  "calculationComponents": {
+    "regionalNatGatewayCount":         {"value": "1"},
+    "regionalNatGatewayAzCount":       {"value": "3"},
+    "regionalNatGatewayDataProcessed": {"value": "1024", "unit": "gb|month"},   // per Regional NAT GW
+    "numberOfGateways":                {"value": "0"},
+    "dataProcessedPerNATGateway":      {"value": "0", "unit": "gb|month"}
+  },
+  "serviceCost": {"monthly": 167.13}
+}
+```
+
+`monthly = regionalCount x (AZs x 730 x hour_rate + GB x byte_rate) + zonal x (730 x hour_rate + GB x byte_rate)`. Rates: `AmazonEC2`, `productFamily=NAT Gateway`, usagetypes `<P>-RegionalNatGateway-Hours` / `-Bytes` (and `<P>-NatGateway-Hours` / `-Bytes` for zonal). The SPA configSummary for the sub-service: `Number of Regional NAT Gateways (1), Number of Availability Zones Regional NAT Gateways is active in (3), Number of NAT Gateways (0)`.
+
+### (superseded) earlier partial NAT notes
 
 The live form (`version 0.0.19`) is more complex than the two verified sub-services. Its real input set is **not** the simple `{numberOfNATGateways, dataProcessedPerNATGateway}` shape previously guessed here — inspecting the current service definition shows the primary count field is actually `numberOfGateways` (not `numberOfNATGateways`), plus a separate **regional** NAT Gateway block (`regionalNatGatewayCount`, `regionalNatGatewayAzCount`, `regionalNatGatewayDataProcessed`, …) and several `networkAddressTranslationNatGateway_generated_*` fields whose semantics are not captured.
 
@@ -87,7 +113,7 @@ The live form (`version 0.0.19`) is more complex than the two verified sub-servi
 }
 ```
 
-**Do not emit a NAT Gateway line from this partial shape.** It is missing the `regionalNatGateway*` and `_generated_*` fields the form requires, so a saved estimate will error on the recipient's "Update" (the SPA reports the service as incompatible with its inputs). Refuse the NAT Gateway line and offer to capture a HAR to complete the module. Pricing API filters are correct (below) for when the shape is captured. Same rule for any other unverified VPC sub-service.
+**Superseded by the captured shape above.** The historical note follows: It is missing the `regionalNatGateway*` and `_generated_*` fields the form requires, so a saved estimate will error on the recipient's "Update" (the SPA reports the service as incompatible with its inputs). Refuse the NAT Gateway line and offer to capture a HAR to complete the module. Pricing API filters are correct (below) for when the shape is captured. Same rule for any other unverified VPC sub-service.
 
 **Resolving the `networkAddressTranslationNatGateway_generated_*` tokens — try the public catalog FIRST.** Per `references/opaque-tokens.md`, before capturing a HAR you should first try the world-readable meteredUnitMaps catalog via `scripts/resolve_token.py`. Probe outcome (probed 2026-07-13):
 
@@ -241,9 +267,7 @@ S2S VPN monthly        = vpn_per_hour * connection_count * vpn_hours_per_month
                                                        * vpnConnection_numberOfWorkDays.value
 TGW attachment monthly = tgw_attach_per_hour * 730 * numberOfTransitGatewayAttachments
 TGW data monthly       = tgw_per_gb * dataProcessedPerTransitGatewayAttachment * numberOfTransitGatewayAttachments
-# NAT Gateway — pricing-reference ONLY. Do NOT emit a NAT line from this (see the
-# NAT Gateway sub-service section: the cc shape is incomplete, refuse + offer HAR).
-# Field name is numberOfGateways (NOT the old wrong numberOfNATGateways).
+# NAT Gateway — see the captured Regional NAT shape above (regional block is mandatory).
 NAT GW hourly monthly  = nat_per_hour * 730 * numberOfGateways
 NAT GW data monthly    = nat_per_gb * dataProcessedPerNATGateway * numberOfGateways
 
@@ -284,7 +308,7 @@ The captured estimate's S2S VPN priced at $73/mo for 2 connections × 24h × 22 
 |---|---|
 | numberOfSiteToSiteVPNConnections | "0" (no VPN) |
 | numberOfTransitGatewayAttachments | "0" (no TGW) |
-| numberOfGateways (NAT GW) | "0" — pricing-reference only; the NAT sub-service is NOT emittable (refuse + offer HAR, see its section). Field name is `numberOfGateways`, not the old wrong `numberOfNATGateways`. |
+| numberOfGateways (NAT GW) | "0", with the NAT gateways modelled as one Regional NAT GW x N AZs (the form requires the regional block) |
 | dataTransfer.value (the array) | omit `dataTransferVpc` entirely if the user did not mention data transfer; otherwise include all three entryTypes with `"0"` for the ones the user did not specify |
 | numberOfInterfaceVPCEndpointsPerRegion | "0" (omit `awsPrivateLinkVpc` entirely if not mentioned) |
 | numberOfAvailabilityZonesEndpointsDeployed | match the user's `numberOfAvailabilityZones` for the VPC; default `"2"` if unspecified |

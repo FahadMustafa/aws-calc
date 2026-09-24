@@ -1,0 +1,77 @@
+{
+  "version": "0.0.101",
+  "serviceCode": "amazonVirtualPrivateCloud",
+  "estimateFor": "virtualPrivateCloudSubServiceSelector",
+  "region": "eu-central-1",
+  "description": null,
+  "subServices": [
+    {
+      "calculationComponents": {
+        "dataTransfer": {
+          "value": [
+            {
+              "entryType": "INBOUND",
+              "value": "",
+              "unit": "tb_month",
+              "fromRegion": ""
+            },
+            {
+              "entryType": "OUTBOUND",
+              "value": "5",
+              "unit": "tb_month",
+              "toRegion": "External"
+            },
+            {
+              "entryType": "INTRA_REGION",
+              "value": "20",
+              "unit": "tb_month"
+            }
+          ]
+        }
+      },
+      "serviceCode": "dataTransferVpc",
+      "region": "eu-central-1",
+      "estimateFor": "dataTransfer",
+      "version": "0.0.9",
+      "description": null,
+      "serviceCost": {
+        "monthly": 870.4
+      }
+    },
+    {
+      "calculationComponents": {
+        "regionalNatGatewayCount": {
+          "value": "1"
+        },
+        "regionalNatGatewayAzCount": {
+          "value": "3"
+        },
+        "numberOfGateways": {
+          "value": "0"
+        },
+        "dataProcessedPerNATGateway": {
+          "value": "0",
+          "unit": "gb|month"
+        },
+        "regionalNatGatewayDataProcessed": {
+          "value": "1024",
+          "unit": "gb|month"
+        }
+      },
+      "serviceCode": "networkAddressTranslationNatGatewayVpc",
+      "region": "eu-central-1",
+      "estimateFor": "networkAddressTranslationGateway",
+      "version": "0.0.19",
+      "description": null,
+      "serviceCost": {
+        "monthly": 167.13
+      }
+    }
+  ],
+  "serviceCost": {
+    "monthly": 1037.53
+  },
+  "serviceName": "Amazon Virtual Private Cloud (VPC)",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "DT Inbound: Not selected (0 TB per month), DT Outbound: Internet (5 TB per month), DT Intra-Region: (20 TB per month), Data transfer cost (870.4000000000001) Number of Regional NAT Gateways (1), Number of Availability Zones Regional NAT Gateways is active in (3), Number of NAT Gateways (0)"
+}

@@ -6,15 +6,16 @@ Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and E
 
 | Path | Confidence | Anchor |
 |---|---|---|
-| Node-based Redis OSS On-Demand, two `columnFormIPM` clusters (us-east-2) | capture-verified | `captures/saveAs/per-service/amazonElastiCache.json` (local capture) — cc shape verbatim |
+| Node-based **Valkey** On-Demand, one `columnFormIPM` row (`cache.m7g.large`, `cache.t4g.medium`, `cache.r7g.large`; 1 or 2 nodes; eu-central-1) | recompute-verified | live SPA 2026-09-24, 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`) — "Update estimate" reproduced all 5 Valkey lines to the cent |
+| Valkey cc shape at form 0.0.88 (engine set per row via `Cache Engine: "Valkey"`; zero-node `columnFormIPMDT` placeholder; `_dsp` row with no Serverless scalars) | capture-verified | `references/fixtures/amazonElastiCache-valkey.json` (SPA saveAs, 2x cache.m7g.large, $219.58) |
+| Node-based Redis OSS On-Demand, two `columnFormIPM` clusters (us-east-2) | capture-verified | `captures/saveAs/per-service/amazonElastiCache.json` (local capture, form 0.0.87) — cc shape verbatim |
 | Node-hour / snapshot / Serverless ECPU / Serverless storage SKU shapes | capture-verified | `pricing_client.py get-products` for `cache.m5.xlarge` and `cache.r6gd.12xlarge`, us-east-2 |
 | Serverless math (`processingUnitCount_v2`, `AvgCacheDataSize_v2`, `AvgDataTransfer_v2`) | inferred | ~$18,339/mo of the $87,106.81 capture does not decompose into published rates — best-effort only |
 | Cross-AZ replication data transfer | inferred | no dedicated cc field; the SPA appears to derive it |
 | Reserved Cache Nodes (`TermType` packed string) | inferred | pattern borrowed from RDS; proven to collapse on sibling forms — refuse until an RI HAR exists |
 | Reserved upfront-vs-recurring split | inferred | read off the Pricing API response shape, not a Reserved saveAs |
-| `EngineType` tokens for Valkey and Memcache | inferred | form 0.0.87 option ids; Memcache shares the Redis OSS id, so the token does not distinguish them |
-| `AvgCacheDataSize_nonval_v2` (the Valkey-mode scalar) | inferred | form 0.0.87 definition only |
-| Single-cluster shape (zero-node `columnFormIPMDT` placeholder) and empty Serverless (`processingUnitCount_v2: "0"`) | inferred | the capture always carries two real rows and "100" |
+| `EngineType` top-level token (not load-bearing at 0.0.88) | capture-verified | `references/fixtures/amazonElastiCache-valkey.json`: the field is disabled (legacy Serverless section); the SPA saves the Redis OSS token even for Valkey. The engine that prices a node row is that row's `Cache Engine` |
+| Serverless scalars (`processingUnitCount_v2`, `AvgCacheDataSize*_v2`, `AvgDataTransfer_v2`) with non-zero values | inferred | omitted entirely in the 0.0.88 Valkey capture when unused |
 | Redis Enterprise Cloud | inferred | not an option in form 0.0.87 — Marketplace, refuse |
 
 > Redis Enterprise Cloud on AWS is a Marketplace product priced separately; it is **not** modelled by this `serviceCode`. Don't try to route Redis Enterprise briefs through this module — say so and offer to skip or capture a HAR.
@@ -25,7 +26,7 @@ Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and E
 {
   "serviceCode":  "amazonElastiCache",
   "estimateFor":  "amazonElastiCache",
-  "version":      "0.0.87",
+  "version":      "0.0.88",
   "region":       "<code>",
   "regionName":   "<display>",
   "serviceName":  "Amazon ElastiCache",
@@ -34,6 +35,41 @@ Covers ElastiCache node-based deployments (Redis OSS / Valkey / Memcached) and E
 ```
 
 `estimateFor`, `version`, and `serviceName` taken verbatim from `captures/saveAs/per-service/amazonElastiCache.json` (local capture, not in repo).
+
+## Valkey node cluster (form 0.0.88, recompute-verified)
+
+Verbatim from the SPA saveAs (`fixtures/amazonElastiCache-valkey.json`). Emit **one line item per cluster** (primary + replicas = `Number of Nodes`). The form 0.0.88 layout moved the engine choice into each row: the top-level `EngineType` dropdown is disabled, and the SPA still writes the Redis OSS token there for a Valkey row. Pricing follows the row's `Cache Engine`.
+
+```jsonc
+{
+  "EngineType": {"value": "x4dSskWC2UA5R5dVtIkM0EjZJQKU02zll08quzox15U"},   // what the SPA writes; do not swap in the Valkey token
+  "columnFormIPM": {"value": [{
+      "Instance Type":       {"value": "cache.m7g.large"},
+      "Cache Engine":        {"value": "Valkey"},                 // Valkey | Redis | Memcached (row dropdown)
+      "Number of Nodes":     {"value": "2"},
+      "undefined":           {"value": {"unit": "100", "selectedId": "%Utilized/Month"}},
+      "Instance Family":     {"value": "Standard"},               // SPA derives it from the type: m*/t* -> Standard, r* -> Memory optimized
+      "TermType":            {"value": "OnDemand"},
+      "LeaseContractLength": {"value": "1yr"},                    // written even for OnDemand; keep
+      "PurchaseOption":      {"value": "No Upfront"}
+  }]},
+  "columnFormIPMDT": {"value": [{                                 // data-tiering slot left at 0 nodes (SPA default row)
+      "Number of Nodes": {"value": "0"}, "Instance Type": {"value": "cache.r6gd.12xlarge"},
+      "undefined": {"value": {"unit": "100", "selectedId": "%Utilized/Month"}},
+      "Cache Engine": {"value": "Redis"}, "Instance Family": {"value": "Memory optimized"}, "TermType": {"value": "OnDemand"}}]},
+  "columnFormIPM_dsp": {"value": [{"TermType": {"value": "OnDemand"}, "Cache Engine": {"value": "Memcached"}}]}
+}
+```
+
+No Serverless scalar keys are present when Serverless is unused. Rate: `AmazonElastiCache`, `productFamily=Cache Instance`, `cacheEngine=Valkey`, `usagetype=<P>-NodeUsage:<type>` (skip the `SyncDurability-NodeUsage` SKU, which is a different product). eu-central-1: m7g.large $0.1504, t4g.medium $0.0576 (Valkey t4g is offered), r7g.large $0.2104 per node-hour. `monthly = rate x 730 x nodes`.
+
+configSummary the SPA writes:
+
+```
+Engine (Redis OSS), Nodes (0), Instance type (cache.r6gd.12xlarge), Utilization (On-Demand only) (100 %Utilized/Month), Cache Engine (Redis), Cache Node Type (Memory optimized), Pricing strategy (OnDemand), Instance type (<type>), Cache Engine (Valkey), Nodes (<N>), Utilization (On-Demand only) (100 %Utilized/Month), Cache Node Type (<family>), Pricing strategy (OnDemand 1yr No Upfront), Cache Engine (Memcached), Pricing strategy (OnDemand)
+```
+
+The form-0.0.87 notes below still describe the Redis OSS capture and the Serverless fields; where they disagree with this section (Valkey `EngineType` token, zero-node placeholder being unverified), this section wins.
 
 ## calculationComponents (verified shape)
 
@@ -294,3 +330,4 @@ When the user asks for "ElastiCache Serverless" specifically, flip the defaults:
 - **Form 0.0.81 → 0.0.87 (2026-09-06).** Diffed the documented cc keys against the live form definition (`data/amazonElastiCache/en_US.json`, version `0.0.87`). Every documented key still exists: `EngineType`, `AvgCacheDataSize`, `AvgCacheDataSize_v2`, `AvgDataTransfer`, `AvgDataTransfer_v2`, `processingUnitCount_v2`, `columnFormIPM`, `columnFormIPMDT`, `columnFormIPM_dsp`. **No cc-relevant change**: fields added: none, renamed: none, removed: none.
 - Four live input ids are *not* cc keys in this module and should stay that way: `Alert` and `dt_bodyText` are display-only, and `AvgCacheDataSize_nonval` / `processingUnitCount` / `AvgDataTransfer` / `AvgCacheDataSize` all carry `isDisabled: "true"` in 0.0.87 — they are read-only mirrors the form renders under a different engine or metered-unit condition, not user inputs. The one exception worth knowing about is `AvgCacheDataSize_nonval_v2`, which is *not* disabled and is the field the form shows in place of `AvgCacheDataSize_v2` when the engine is Valkey. Read from the form definition; **not capture-verified**.
 - `EngineType` option ids for Valkey and Memcache were read out of the same file and filled into the token table above (Memcache shares the Redis OSS id). Still **inferred, not capture-verified** — the Serverless caveat and the Reserved-`TermType` refusal above are unchanged by this bump.
+- **Form 0.0.87 -> 0.0.88 (2026-09-24), Valkey capture.** Captured from the live SPA (eu-central-1, 2x cache.m7g.large Valkey): engine now lives in each row's `Cache Engine`; `EngineType` is disabled and saved as the Redis OSS token; the zero-node `columnFormIPMDT` row and an empty `_dsp` row are what the SPA itself saves. Recompute-verified on five Valkey lines (m7g.large x2 twice, t4g.medium x2, r7g.large x2, t4g.medium x1). The Redis OSS two-cluster capture was not re-run at 0.0.88.

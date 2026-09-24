@@ -8,8 +8,10 @@ One flat line item that covers the entire CloudWatch surface area in the calcula
 |---|---|---|
 | cc field set and field names (every dimension exercised, us-east-2) | capture-verified | `captures/saveAs/per-service/amazonCloudWatch.json` (local capture) |
 | Per-dimension `usagetype` -> SKU mapping (metrics, API requests, alarms, Logs, Logs Insights, Synthetics, RUM, Contributor Insights) | capture-verified | rates pulled live via `pricing_client.py` for us-east-2 usagetypes |
-| Aggregate monthly total ($222.05) | inferred | not reproduced end-to-end — needs the SPA's internal RUM byte factor and engine selection |
-| Dashboards flat $3.00/dashboard-month | inferred | AWS public pricing page; no `productFamily=Dashboard` SKU in tested regions |
+| Logs ingest + storage + custom metrics + standard alarms + dashboards + Logs Insights (eu-central-1) | recompute-verified | live SPA 2026-09-24, 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`) ($267.09) |
+| Log storage = ingested GB **x 0.15** compression x 1-month retention x storage rate | recompute-verified | form 0.0.141 maths (`constant: 0.15`, "Storage compression factor") + same estimate. The formula further down that bills `total_ingested_gb * 0.03` over-states storage 6.7x |
+| Dashboards: first 3 free, then $3.00/dashboard-month (tiered maths `TieredDashboard`) | recompute-verified | same estimate: 5 dashboards = $6.00 |
+| Aggregate monthly total ($222.05 capture) | inferred | not reproduced end-to-end — needs the SPA's internal RUM byte factor and engine selection |
 | Mobile RUM payload sizing (`numberOfMobileEvents` -> OTEL GB) | inferred | byte-per-event conversion is not Price-List-derived |
 | Lambda Insights cost path | inferred | internal multipliers not exposed via the Pricing API |
 | `numberOfvCPUs_Aurora` per-engine rate selection | inferred | one bucket spans RDS/Aurora Provisioned; the form picks the engine internally |
@@ -234,7 +236,7 @@ alarm_comp_cost      = numberOfCompositeAlarms          * 0.50
 alarm_mi_cost        = numberOfAlarmsMetricInsights     * 0.10
 
 # Dashboards
-dash_cost            = numberOfDashboards               * 3.00     # flat; see note
+dash_cost            = max(0, numberOfDashboards - 3)   * 3.00     # first 3 free (live-SPA verified 2026-09-24)
 
 # Logs ingest
 log_std_cost         = sizeOfStandardLogsDataIngested            * 0.50
@@ -249,7 +251,7 @@ parquet_cost         = (sizeOfLogsDeliveredToS3 * 0.035)  if logParquetFormatCon
 # Logs storage
 total_ingested_gb    = sizeOfStandardLogsDataIngested + sizeOfInfrequentAccessLogsDataIngested
                        + sizeOfVendedLogsDataIngested + sizeOfInfrequentAccessVendedLogsDataIngested
-log_storage_cost     = (total_ingested_gb * 0.03)         if logStorageOption == "1" else 0
+log_storage_cost     = (total_ingested_gb * 0.15 * storage_rate) if logStorageOption == "1" else 0   # 0.15 compression factor, 1-month retention (live-SPA verified 2026-09-24)
 
 # Logs Insights queries
 insights_cost        = sizeOfLogsInsightsQueriesDataScanned * 0.005

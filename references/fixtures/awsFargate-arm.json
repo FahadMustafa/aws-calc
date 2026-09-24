@@ -1,0 +1,40 @@
+{
+  "calculationComponents": {
+    "operatingSystem": {
+      "value": "linux"
+    },
+    "selectArchitecture": {
+      "value": "arm"
+    },
+    "taskDuration": {
+      "value": "730",
+      "unit": "hr"
+    },
+    "vcpuPerTask": {
+      "value": "2"
+    },
+    "numberOfTasks": {
+      "value": "4",
+      "unit": "perMonth"
+    },
+    "storageAmountECS": {
+      "value": "20",
+      "unit": "gb|NA"
+    },
+    "memoryStandardFargateOnDemand": {
+      "value": "4",
+      "unit": "gb|NA"
+    }
+  },
+  "serviceCode": "awsFargate",
+  "region": "eu-central-1",
+  "estimateFor": "template",
+  "version": "0.0.66",
+  "description": null,
+  "serviceCost": {
+    "monthly": 265.31
+  },
+  "serviceName": "AWS Fargate",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "Operating system (Linux), CPU Architecture (ARM), Average duration (730 hours), Number of tasks or pods (4 per month), Amount of ephemeral storage allocated for Amazon ECS (20 GB), Amount of memory allocated (4 GB)"
+}

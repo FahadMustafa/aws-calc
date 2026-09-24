@@ -1,0 +1,91 @@
+{
+  "calculationComponents": {
+    "EngineType": {
+      "value": "x4dSskWC2UA5R5dVtIkM0EjZJQKU02zll08quzox15U"
+    },
+    "columnFormIPMDT": {
+      "value": [
+        {
+          "Number of Nodes": {
+            "value": "0"
+          },
+          "Instance Type": {
+            "value": "cache.r6gd.12xlarge"
+          },
+          "undefined": {
+            "value": {
+              "unit": "100",
+              "selectedId": "%Utilized/Month"
+            }
+          },
+          "Cache Engine": {
+            "value": "Redis"
+          },
+          "Instance Family": {
+            "value": "Memory optimized"
+          },
+          "TermType": {
+            "value": "OnDemand"
+          }
+        }
+      ]
+    },
+    "columnFormIPM": {
+      "value": [
+        {
+          "Instance Type": {
+            "value": "cache.m7g.large"
+          },
+          "Cache Engine": {
+            "value": "Valkey"
+          },
+          "Number of Nodes": {
+            "value": "2"
+          },
+          "undefined": {
+            "value": {
+              "unit": "100",
+              "selectedId": "%Utilized/Month"
+            }
+          },
+          "Instance Family": {
+            "value": "Standard"
+          },
+          "TermType": {
+            "value": "OnDemand"
+          },
+          "LeaseContractLength": {
+            "value": "1yr"
+          },
+          "PurchaseOption": {
+            "value": "No Upfront"
+          }
+        }
+      ]
+    },
+    "columnFormIPM_dsp": {
+      "value": [
+        {
+          "TermType": {
+            "value": "OnDemand"
+          },
+          "Cache Engine": {
+            "value": "Memcached"
+          }
+        }
+      ]
+    }
+  },
+  "serviceCode": "amazonElastiCache",
+  "region": "eu-central-1",
+  "estimateFor": "amazonElastiCache",
+  "version": "0.0.88",
+  "description": null,
+  "serviceCost": {
+    "monthly": 219.58,
+    "upfront": 0
+  },
+  "serviceName": "Amazon ElastiCache",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "Engine (Redis OSS), Nodes (0), Instance type (cache.r6gd.12xlarge), Utilization (On-Demand only) (100 %Utilized/Month), Cache Engine (Redis), Cache Node Type (Memory optimized), Pricing strategy (OnDemand), Instance type (cache.m7g.large), Cache Engine (Valkey), Nodes (2), Utilization (On-Demand only) (100 %Utilized/Month), Cache Node Type (Standard), Pricing strategy (OnDemand 1yr No Upfront), Cache Engine (Memcached), Pricing strategy (OnDemand)"
+}
