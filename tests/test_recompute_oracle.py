@@ -152,6 +152,32 @@ def test_group_sub_services_are_walked_and_labelled(sample_body):
     assert row_for(rows, "amazonS3Standard")["key"].startswith("amazonSimpleStorageServiceGroup-")
 
 
+def test_line_items_inside_estimate_groups_are_walked_recursively(sample_body):
+    """Regression: an all-grouped body used to report 0 lines."""
+    ec2_key, ec2 = next((k, v) for k, v in sample_body["services"].items() if v["serviceCode"] == "ec2Enhancement")
+    body = {
+        "services": {},
+        "groups": {
+            "Production-g1": {
+                "name": "Production",
+                "services": {ec2_key: ec2},
+                "groups": {"Web-g2": {"name": "Web", "services": {ec2_key: ec2}, "groups": {}}},
+            }
+        },
+    }
+    labels = [label for label, _item, _region in oracle.iter_line_items(body)]
+    assert labels == [f"Production / {ec2_key}", f"Production / Web / {ec2_key}"]
+
+
+def test_region_code_wins_over_a_drifted_display_region_name(sample_body, monkeypatch):
+    """Regression: the SPA now writes "Europe (Frankfurt)"; catalogs key on "EU (Frankfurt)"."""
+    seen = []
+    monkeypatch.setitem(oracle.ORACLES, "fakeService", lambda item, region_name, refresh=False: seen.append(region_name) or oracle.no_oracle("stub"))
+    item = {"serviceCode": "fakeService", "region": "eu-central-1", "regionName": "Europe (Frankfurt)", "serviceCost": {"monthly": 1}}
+    oracle.evaluate({"services": {"fakeService-1": item}, "groups": {}})
+    assert seen == [catalog.region_display_name("eu-central-1")]
+
+
 def test_sample_body_has_no_breaches_and_the_cli_exits_zero(sample_body, capsys, monkeypatch, offline_catalog):
     rows = oracle.evaluate(sample_body)
     assert oracle.breaches(rows, oracle.DEFAULT_TOLERANCE_PCT) == []

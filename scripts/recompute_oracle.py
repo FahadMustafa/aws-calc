@@ -531,19 +531,30 @@ def iter_line_items(body: dict):
 
     Group services (`subServices`) are descended into: each sub-service is matched
     by its own serviceCode, and inherits the group's regionName when it has none.
+    Estimate groups (`body.groups`, recursively) are walked too — a grouped
+    line item used to be skipped silently, so an all-grouped body reported 0 lines.
     """
-    for key, item in (body.get("services") or {}).items():
+    yield from _iter_container(body, prefix="")
+
+
+def _iter_container(container: dict, prefix: str):
+    """Walk one services dict, then recurse into its groups (groups nest arbitrarily deep)."""
+    for key, item in (container.get("services") or {}).items():
         if not isinstance(item, dict):
             continue
+        label = f"{prefix}{key}"
         subs = item.get("subServices")
         if isinstance(subs, list):
             for index, sub in enumerate(subs):
                 if not isinstance(sub, dict):
                     continue
                 region_name = sub.get("regionName") or item.get("regionName")
-                yield f"{key} > [{index}] {sub.get('serviceCode')}", sub, region_name
+                yield f"{label} > [{index}] {sub.get('serviceCode')}", sub, region_name
         else:
-            yield key, item, item.get("regionName")
+            yield label, item, item.get("regionName")
+    for group in (container.get("groups") or {}).values():
+        if isinstance(group, dict):
+            yield from _iter_container(group, prefix=f"{prefix}{group.get('name', '?')} / ")
 
 
 def evaluate(body: dict, *, refresh: bool = False) -> list[dict]:
@@ -558,8 +569,11 @@ def evaluate(body: dict, *, refresh: bool = False) -> list[dict]:
             result = no_oracle(f"no oracle for serviceCode {service_code!r}")
         else:
             try:
-                if not region_name:
-                    region_name = catalog.region_display_name(item.get("region") or "")
+                # Catalogs key regions by Price List location ("EU (Frankfurt)"); the SPA's
+                # display regionName has drifted ("Europe (Frankfurt)" since 2026), so the
+                # region code is the reliable key. Fall back to regionName only without one.
+                if item.get("region"):
+                    region_name = catalog.region_display_name(item["region"])
                 result = recomputer(item, region_name, refresh=refresh)
             except (CatalogError, OSError) as exc:
                 # A covered service the oracle could not reach or read. Not the same
