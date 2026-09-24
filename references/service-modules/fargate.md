@@ -10,6 +10,7 @@ Serverless container compute for ECS tasks (and EKS pods). One line item per tas
 | Linux x86 vCPU / memory rates | capture-verified | `pricing_client.py get-products` against `AmazonECS`, us-east-2 |
 | `numberOfTasks.unit: "perDay"` + `taskDuration` conversion | capture-verified | same capture |
 | Linux ARM (`selectArchitecture: "arm"`), 24x7 tasks as `numberOfTasks` `perMonth` + `taskDuration` `hr` (eu-central-1) | recompute-verified | live SPA 2026-09-24, 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`) — 8 ARM lines reproduced to the cent on "Update estimate" |
+| Linux x86 (`selectArchitecture: "x86"`), 24x7 tasks as `numberOfTasks` `perMonth` + `taskDuration` `hr` (eu-central-1) | recompute-verified | live SPA 2026-09-24, x86 variant of the reference estimate: 8 lines to the cent (eu-central-1 x86: $0.04656/vCPU-h, $0.00511/GB-h). Same per-part 2dp rounding as ARM |
 | Linux ARM cc shape | capture-verified | `references/fixtures/awsFargate-arm.json` (SPA saveAs, 4 tasks x 730 h x 2 vCPU / 4 GB, $265.31) |
 | Windows (`operatingSystem: "windows"`) | inferred | adds an OS-license per-vCPU charge; form shape not captured |
 | Fargate Spot | inferred | Pricing API exposes no Spot rates; the cc field is assumed — capture before quoting |

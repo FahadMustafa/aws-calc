@@ -7,6 +7,7 @@ Single line item per DB instance (the form holds one `columnFormIPM` row). Cover
 | Path | Confidence | Anchor |
 |---|---|---|
 | On-Demand instance + gp3 storage, Multi-AZ and Single-AZ (`db.r7g.2xlarge`, `db.m7g.large`, `db.t4g.medium`, eu-central-1) | recompute-verified | live SPA 2026-09-24: 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`), "Update estimate" reproduced all 5 lines to the cent |
+| Same path on x86 types (`db.r7i.2xlarge` Multi-AZ and Single-AZ, `db.m7i.large` Multi-AZ and Single-AZ, `db.t3.medium` Multi-AZ, eu-central-1) | recompute-verified | live SPA 2026-09-24, second 33-line reference estimate (x86 variant, ID withheld): all 5 lines reproduced to the cent. The calculator does not model T3 Unlimited CPU-credit surcharges |
 | cc shape (incl. `LeaseContractLength`/`PurchaseOption` present on an On-Demand row) | capture-verified | `references/fixtures/amazonRDSMariaDB.json` (SPA saveAs, db.r7g.2xlarge Multi-AZ 500 GB gp3, $1,837.17) |
 | gp3 at baseline (`gp3Iops`/`gp3Throughput` = 12000/500 for >= 400 GB, 3000/125 below) | recompute-verified | same estimate — no IOPS/throughput surcharge on recompute |
 | gp3 IOPS / throughput above baseline | inferred | form maths `billableGp3IOPS` / `billableProvisionedThroughput` exist; not exercised |
