@@ -1,0 +1,37 @@
+{
+  "calculationComponents": {
+    "computeType": {
+      "value": "ondemandec2"
+    },
+    "buildsinaMonth": {
+      "value": "10"
+    },
+    "AvgBuildTime": {
+      "value": "40",
+      "unit": "min"
+    },
+    "columnFormIPM": {
+      "value": [
+        {
+          "Compute Type": {
+            "value": "general1.large"
+          },
+          "Operating System": {
+            "value": "Linux"
+          }
+        }
+      ]
+    }
+  },
+  "serviceCode": "awsCodeBuild",
+  "region": "eu-central-1",
+  "estimateFor": "template_0",
+  "version": "0.0.44",
+  "description": null,
+  "serviceCost": {
+    "monthly": 8
+  },
+  "serviceName": "AWS CodeBuild",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "AWS CodeBuild Compute Type (On-Demand EC2), Number of builds in a month (10), Search Instance Type (general1.large), Operating system (Linux)"
+}

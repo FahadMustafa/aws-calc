@@ -10,7 +10,8 @@ Covers the four AWS Config metering dimensions in a single line item: continuous
 | Per-dimension rates | capture-verified | `pricing_client.py get-products` against `AWSConfig`, us-east-2 |
 | Tiered bands above the first band for rule / conformance-pack evaluations | inferred | the capture sits inside the first band |
 | Continuous vs periodic allocation across resource types | inferred | the calculator surfaces two independent counters and trusts the user to allocate |
-| Regions other than us-east-2 | inferred | rates are stable across most commercial regions but the tier structure has changed before |
+| eu-central-1 (first-tier volumes) | recompute-verified | live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld), plus two earlier reference estimates |
+| Regions other than us-east-2 and eu-central-1 | inferred | rates are stable across most commercial regions but the tier structure has changed before |
 
 ## Line-item header
 

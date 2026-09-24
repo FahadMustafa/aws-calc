@@ -12,7 +12,8 @@ One line item covers every paid GuardDuty dimension exposed by the calculator: f
 | Malware Protection (EBS, EC2 AMI, S3 backup, S3 data + PUT) | capture-verified | same capture; the calculator skips the 1 GB free band |
 | `aiDataEvents` (AI Protection) | inferred | form 0.0.77 definition (2026-09-06); Pricing API SKU not resolved — look the rate up before quoting |
 | Other fields present in form 0.0.77 that no capture exercised | inferred | form 0.0.77 definition only |
-| Regions other than us-east-2 | inferred | per-region rates should be re-queried |
+| Foundational + S3 + ECS/Fargate Runtime Monitoring (`ecsInstances`, tiered $1.92 first 500 vCPU-months), eu-central-1 | recompute-verified | live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld); foundational dimensions also verified on two earlier estimates |
+| Regions other than us-east-2 and eu-central-1 | inferred | per-region rates should be re-queried |
 
 ## Line-item header
 

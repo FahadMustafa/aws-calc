@@ -1,0 +1,38 @@
+{
+  "calculationComponents": {
+    "sourceType": {
+      "value": "direct"
+    },
+    "dynamicPartitioningAddOn": {
+      "value": "0"
+    },
+    "ratioDataRetry": {
+      "value": "1.3"
+    },
+    "recordMultDI": {
+      "value": "1"
+    },
+    "dataPerRecord": {
+      "value": "25",
+      "unit": "kb|NA"
+    },
+    "dataFormatConversionSelect": {
+      "value": "0"
+    },
+    "numberOfRecordsIngested": {
+      "value": "5.6",
+      "unit": "perSecond"
+    }
+  },
+  "serviceCode": "amazonKinesisFirehose",
+  "region": "eu-central-1",
+  "estimateFor": "KinesisDataFirehose",
+  "version": "0.0.112",
+  "description": null,
+  "serviceCost": {
+    "monthly": 11.58
+  },
+  "serviceName": "Amazon Data firehose",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "Source Type (Direct PUT or Kinesis Data Stream), Dynamic Partitioning (Add On) (Disabled), Average ratio of data processed to VPC vs data ingested (1.3), Data records units (exact number), Record size (25 KB), Data format conversion (optional) (Disabled), Number of records for data ingestion (5.6 per second)"
+}

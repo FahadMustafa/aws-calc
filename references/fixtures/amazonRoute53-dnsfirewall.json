@@ -1,0 +1,22 @@
+{
+  "calculationComponents": {
+    "numberOfDNSFirewallDomains": {
+      "value": "1000"
+    },
+    "numberOfFirewallDNSQueries": {
+      "value": "50",
+      "unit": "millionPerMonth"
+    }
+  },
+  "serviceCode": "amazonRoute53",
+  "region": "eu-central-1",
+  "estimateFor": "Route53",
+  "version": "0.0.88",
+  "description": null,
+  "serviceCost": {
+    "monthly": 30.5
+  },
+  "serviceName": "Amazon Route 53",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "Number of domains stored (1000)"
+}

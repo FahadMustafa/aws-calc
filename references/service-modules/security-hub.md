@@ -10,7 +10,8 @@ Covers AWS Security Hub standards (compliance checks), finding ingestion from ot
 | Standards / findings / automation rate lookups | capture-verified | `pricing_client.py get-products` for the three `productFamily` values, us-east-2 |
 | Per-account-per-Region tier walk (tier first, then multiply by `noOfAccounts`) | inferred | both orders coincide at the captured scale, so the capture does not discriminate |
 | Multi-Region rollout (one line item per Region) | inferred | the UI exposes one Region per line item; the split is this module's guidance |
-| Regions other than us-east-2 | inferred | per-region rates should be re-queried |
+| eu-central-1 (first-tier volumes) | recompute-verified | live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld), plus two earlier reference estimates |
+| Regions other than us-east-2 and eu-central-1 | inferred | per-region rates should be re-queried |
 
 ## Line-item header
 

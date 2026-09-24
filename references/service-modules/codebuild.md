@@ -6,6 +6,7 @@ Single line item covering one or more **build-compute variants** on a single Cod
 
 | Path | Confidence | Anchor |
 |---|---|---|
+| `general1.large` Linux, On-Demand EC2 (eu-central-1) | recompute-verified | `references/fixtures/awsCodeBuild-general1-large.json` (SPA saveAs, 10 builds x 40 min = $8.00) + live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld) |
 | On-Demand EC2 fleet (`computeType: "ondemandec2"`), single `columnFormIPM` row, us-east-2 | capture-verified | `captures/saveAs/per-service/awsCodeBuild.json` (local capture) — $0.90 matches exactly |
 | Per-build-minute rate lookup (`computeFamily=OnDemand-EC2`) | capture-verified | `pricing_client.py get-products` (SKU UB8Y5XEZW2M4GZ8Y, $0.09/min) |
 | Lambda fleet (`ondemandlambda`) | inferred | form value and per-second vs per-minute conversion unconfirmed |

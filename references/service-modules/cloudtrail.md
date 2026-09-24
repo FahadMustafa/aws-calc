@@ -14,7 +14,8 @@ Covers the four CloudTrail metering surfaces in one line item: management/data/n
 | Network-activity events treated as free on the first trail copy | inferred | the calculator's behaviour contradicts AWS docs, which price them from the first copy — may change |
 | Separate "$0.20/100k Lambda" data-event rate | inferred | no distinct SKU; appears to apply only to additional trail copies |
 | `dataIngestedOther` source validation | inferred | one $0.50/GB SKU; the SPA does not validate the source |
-| Regions other than us-east-2 | inferred | usagetype prefix swap assumed |
+| eu-central-1 (first-tier volumes) | recompute-verified | live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld), plus two earlier reference estimates |
+| Regions other than us-east-2 and eu-central-1 | inferred | usagetype prefix swap assumed |
 
 ## Line-item header
 

@@ -6,6 +6,7 @@ Covers Amazon Kinesis Data Streams in three distinct modes that share one `servi
 
 | Path | Confidence | Anchor |
 |---|---|---|
+| Provisioned single shard (`percentBuffer "0"`, 1 consumer, 1-day retention, eu-central-1) | recompute-verified | live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld): 1 x 730 x shard-hour + payload units. Note `percentBuffer "20"` turns one required shard into `ceil(1.2) = 2` |
 | Provisioned mode (`amazonKinesisDataStreams`), us-east-2 | capture-verified | `captures/calculator.aws_new.har` (local capture) — $273.85 reproduced exactly |
 | On-Demand classic (`amazonKinesisDataStreamsOnDemand`) | capture-verified | same capture — $274.81 reproduced exactly |
 | On-Demand Advantage (`amazonKinesisDataStreamsOnDemandAdvantage`) | capture-verified | same capture — $3079.69 vs $3079.73 (rounding) |

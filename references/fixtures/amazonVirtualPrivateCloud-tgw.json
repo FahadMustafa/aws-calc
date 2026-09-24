@@ -1,0 +1,41 @@
+{
+  "version": "0.0.101",
+  "serviceCode": "amazonVirtualPrivateCloud",
+  "estimateFor": "virtualPrivateCloudSubServiceSelector",
+  "region": "eu-central-1",
+  "description": null,
+  "subServices": [
+    {
+      "calculationComponents": {
+        "numberOfTransitGatewayAttachments": {
+          "value": "4"
+        },
+        "dataProcessedPerTransitGatewayAttachment": {
+          "value": "307.2",
+          "unit": "gb|month"
+        },
+        "Number_of_multicast_receivers": {
+          "value": "0"
+        },
+        "Multicast_data_processed_per_Transit_Gateway_receiver": {
+          "value": "0",
+          "unit": "gb|month"
+        }
+      },
+      "serviceCode": "transitGatewayVpc",
+      "region": "eu-central-1",
+      "estimateFor": "transitGateway",
+      "version": "0.0.19",
+      "description": null,
+      "serviceCost": {
+        "monthly": 199.76
+      }
+    }
+  ],
+  "serviceCost": {
+    "monthly": 199.76
+  },
+  "serviceName": "Amazon Virtual Private Cloud (VPC)",
+  "regionName": "Europe (Frankfurt)",
+  "configSummary": "Number of Transit Gateway attachments (4), Number of Multicast Receivers (0)"
+}

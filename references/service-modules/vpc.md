@@ -10,7 +10,7 @@ VPC is a **group** service: the line item has `subServices: [...]` for each pric
 | `awsPrivateLinkVpc` (endpoints x AZs x GB) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` — $804.00 computed vs $803.10 captured (endpoint rate nuance) |
 | `dataTransferVpc` outbound + intra-region (2x cross-AZ) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` — $1126.40 = $921.60 out + $204.80 intra ($0.02/GB) |
 | `vpnConnectionVpc` (Site-to-Site VPN) — cc shape captured, hourly formula not reconciled | capture-verified | `references/fixtures/amazonVirtualPrivateCloud.json` ($73/mo line; tunnel-hour nuance unresolved) |
-| `transitGatewayVpc` | inferred | shape documented from the capture/bundle; no reconciled cost in this module |
+| `transitGatewayVpc` (VPC attachments + ingress GB per attachment, multicast 0) | recompute-verified | `references/fixtures/amazonVirtualPrivateCloud-tgw.json` (SPA saveAs: 4 attachments x 307.2 GB, eu-central-1, $199.76) + live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld). `monthly = n x 730 x hour_rate + n x round(GB x byte_rate, 2)` (the SPA rounds the per-attachment data cost first) |
 | `networkAddressTranslationNatGatewayVpc` via a **Regional NAT Gateway** (1 gateway x N AZs, zonal count 0) | recompute-verified | live SPA 2026-09-24, 33-line reference estimate (customer engagement, ID withheld; shapes in `references/fixtures/`) (3 AZ / 1024 GB = $167.13; 1 AZ / 100 GB = $43.16) |
 | NAT cc shape (form 0.0.19, `estimateFor: "networkAddressTranslationGateway"`) | capture-verified | `references/fixtures/amazonVirtualPrivateCloud-nat.json` (SPA saveAs) |
 | Zonal-only NAT (`regionalNatGatewayCount: "0"`) | inferred | refuse: the form rejects it: Regional count and AZ count are required with `minValue: 1`, so the UI cannot save a zonal-only NAT line |
@@ -66,7 +66,9 @@ VPC is a **group** service: the line item has `subServices: [...]` for each pric
   "description":  null,
   "calculationComponents": {
     "numberOfTransitGatewayAttachments":         {"value": "10"},
-    "dataProcessedPerTransitGatewayAttachment":  {"value": "10", "unit": "gb|month"}
+    "dataProcessedPerTransitGatewayAttachment":  {"value": "10", "unit": "gb|month"},   // INGRESS GB per attachment
+    "Number_of_multicast_receivers":             {"value": "0"},                        // the SPA always writes both multicast keys
+    "Multicast_data_processed_per_Transit_Gateway_receiver": {"value": "0", "unit": "gb|month"}
   },
   "serviceCost": { "monthly": <computed>, "upfront": 0 }
 }

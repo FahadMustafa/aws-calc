@@ -9,7 +9,8 @@ Covers hosted zones, DNS queries (standard / latency-based / geo / IP-based / re
 | cc field set, field names, and SKU mapping (all dimensions at "10", us-east-2) | capture-verified | `captures/saveAs/per-service/amazonRoute53.json` (local capture) |
 | Per-dimension rate math (hosted zones, all query classes, Traffic Flow, health checks, Resolver ENI-hours) | capture-verified | same capture — sums to $1580.01 against a stored $1596.02 ($16.02 residual, unexplained) |
 | `RRsetRecord` charge | inferred | no matching public SKU; possible per-zone record allotment |
-| `numberOfVPCs` DNS Firewall association charge | inferred | no top-level SKU exposed |
+| Resolver DNS Firewall only (`numberOfDNSFirewallDomains` + `numberOfFirewallDNSQueries` in `millionPerMonth`, every other key omitted) | recompute-verified | `references/fixtures/amazonRoute53-dnsfirewall.json` (SPA saveAs: 1,000 domains + 50M queries, eu-central-1, $30.50 = 50 x $0.60 + 1,000 x $0.0005) + live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld) |
+| `numberOfVPCs` / `numberOFhours` | inferred | these belong to **DNS Firewall Advanced** (`<P>-AdvancedDNS-ThreatProtectionsVPCAssociationHours`, $0.16 per rule-group-VPC association hour), not to basic DNS Firewall; leave them out unless Advanced is asked for |
 | Health-check per-feature base charge (`numberOfFastIntervalChecks*` most likely) | inferred | candidate explanation for the residual delta |
 | `numberOFhours` as hours-per-month-per-ENI | inferred | inferred from the per-ENI hourly SKU and the captured "10" |
 | Geo intra-AWS vs external query rate split | inferred | the captured body uses a single field for all flavors |

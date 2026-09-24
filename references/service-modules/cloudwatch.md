@@ -16,7 +16,8 @@ One flat line item that covers the entire CloudWatch surface area in the calcula
 | Lambda Insights cost path | inferred | internal multipliers not exposed via the Pricing API |
 | `numberOfvCPUs_Aurora` per-engine rate selection | inferred | one bucket spans RDS/Aurora Provisioned; the form picks the engine internally |
 | `numberOfACUs_AuroraLmitless` rate path | inferred | not exercised in the captured body |
-| Regions other than us-east-2 | inferred | usagetype prefix swap assumed (`USE1-`, `EUW1-`, ...) |
+| Vended logs to CloudWatch Logs (`sizeOfVendedLogsDataIngested`, tiered `<P>-VendedLog-Bytes`) with log storage on | recompute-verified | live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld): storage uses 15% of standard **plus vended** ingest |
+| Regions other than us-east-2 and eu-central-1 | inferred | usagetype prefix swap assumed (`USE1-`, `EUW1-`, ...) |
 
 CloudWatch is **not** a group/subServices line item — every dimension is a sibling field under one `calculationComponents` object. The free tier is enforced by the SPA on the recipient's side; you don't subtract it explicitly when computing `serviceCost`, but the SPA's recomputation will, so set values realistically rather than padding.
 

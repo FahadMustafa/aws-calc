@@ -8,7 +8,8 @@ Formerly Kinesis Data Firehose. Covers the streaming ingest → transform → de
 |---|---|---|
 | Direct PUT ingest, full feature set (us-east-2) | capture-verified | captured saveAs (`/tmp/aws_calc_onboard/amazonKinesisFirehose.json`, lost) — $10,112.96 reproduced within $0.01 |
 | Format conversion, dynamic partitioning, JQ processing, VPC delivery | capture-verified | same capture — all exercised in the reproduced total |
-| `sourceType` of `"kds"` or `"msk"` | inferred | only `"direct"` exercised; the SKUs exist but the literal string is unconfirmed |
+| Kinesis Data Streams as the source | recompute-verified | form 0.0.112 has **no `"kds"` value**: its options are `direct` (labelled "Direct PUT or Kinesis Data Stream"), `vended`, `msk`. Use `"direct"`; `<P>-StreamsSourceBilledBytes` and `<P>-BilledBytes` carry the same tiers. Minimal shape in `references/fixtures/amazonKinesisFirehose-kds.json` (5.6 records/s x 25 KB, `recordMultDI "1"`, toggles off, $11.58 eu-central-1) + live SPA 2026-09-24, 42-line multi-account reference estimate (customer engagement, ID withheld) |
+| `sourceType` `"vended"` / `"msk"` | inferred | form options only |
 | `recordMultDI` values `"1"` and `"1000000"` | inferred | only the `"1000"` -> thousands mapping is captured |
 | `dataPerRecord` in MB rather than the captured KB unit | inferred | assumed to scale by 1024; not exercised |
 
